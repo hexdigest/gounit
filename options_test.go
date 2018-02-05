@@ -52,6 +52,32 @@ func Test_GetOptions(t *testing.T) {
 				}
 			},
 		},
+		{
+			name: "missing input file",
+			args: func(t *testing.T) args {
+				return args{
+					stderr:    newExpectPrefixWriter(t, "missing input file: -i"),
+					stdout:    ioutil.Discard,
+					exit:      expectExitCode(t, 2),
+					arguments: []string{"-l", "10"},
+				}
+			},
+		},
+		{
+			name: "success",
+			args: func(t *testing.T) args {
+				return args{
+					stdout:    ioutil.Discard,
+					arguments: []string{"-l", "10", "-i", "input.go", "-c", "TODO"},
+				}
+			},
+			got1: Options{
+				LineNumber: 10,
+				InputFile:  "input.go",
+				OutputFile: "input_test.go",
+				Comment:    "TODO",
+			},
+		},
 	}
 
 	for _, tt := range tests {
