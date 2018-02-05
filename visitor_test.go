@@ -15,12 +15,12 @@ func Test_NewVisitor(t *testing.T) {
 		name string
 		args func(t *testing.T) args
 
-		got1 *Visitor
+		want1 *Visitor
 	}{
 		{
-			name: "success",
-			args: func(*testing.T) args { return args{} },
-			got1: &Visitor{},
+			name:  "success",
+			args:  func(*testing.T) args { return args{} },
+			want1: &Visitor{},
 		},
 	}
 
@@ -29,8 +29,8 @@ func Test_NewVisitor(t *testing.T) {
 			tArgs := tt.args(t)
 			got1 := NewVisitor(tArgs.match)
 
-			if !reflect.DeepEqual(got1, tt.got1) {
-				t.Errorf("NewVisitor got1 = %v, got1: %v", got1, tt.got1)
+			if !reflect.DeepEqual(got1, tt.want1) {
+				t.Errorf("NewVisitor got1 = %v, want1: %v", got1, tt.want1)
 			}
 
 		})
@@ -52,13 +52,13 @@ func Test_Visitor_Visit(t *testing.T) {
 		init    func(t *testing.T) *Visitor
 		inspect func(r *Visitor, t *testing.T) //inspects receiver after method run
 
-		got1 ast.Visitor
+		want1 ast.Visitor
 	}{
 		{
-			name: "func not found",
-			init: func(*testing.T) *Visitor { return notFoundVisitor },
-			args: func(*testing.T) args { return args{} },
-			got1: notFoundVisitor,
+			name:  "func not found",
+			init:  func(*testing.T) *Visitor { return notFoundVisitor },
+			args:  func(*testing.T) args { return args{} },
+			want1: notFoundVisitor,
 		},
 		{
 			name: "func found",
@@ -75,7 +75,7 @@ func Test_Visitor_Visit(t *testing.T) {
 					t.Errorf("expected non-nil v.found")
 				}
 			},
-			got1: nil,
+			want1: nil,
 		},
 		{
 			name: "func was already found",
@@ -87,7 +87,7 @@ func Test_Visitor_Visit(t *testing.T) {
 					node: nil,
 				}
 			},
-			got1: nil,
+			want1: nil,
 		},
 	}
 
@@ -101,8 +101,8 @@ func Test_Visitor_Visit(t *testing.T) {
 				tt.inspect(receiver, t)
 			}
 
-			if !reflect.DeepEqual(got1, tt.got1) {
-				t.Errorf("Visitor.Visit got1 = %v, got1: %v", got1, tt.got1)
+			if !reflect.DeepEqual(got1, tt.want1) {
+				t.Errorf("Visitor.Visit got1 = %v, want1: %v", got1, tt.want1)
 			}
 
 		})

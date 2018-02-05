@@ -29,7 +29,7 @@ func Test_GetOptions(t *testing.T) {
 		name string
 		args func(t *testing.T) args
 
-		got1 Options
+		want1 Options
 	}{
 		{
 			name: "show help",
@@ -46,7 +46,7 @@ func Test_GetOptions(t *testing.T) {
 			name: "missing line number",
 			args: func(t *testing.T) args {
 				return args{
-					stderr: newExpectPrefixWriter(t, "missing line number: -l\nmissing input file: -i\n"),
+					stderr: newExpectPrefixWriter(t, "missing line number or function name"),
 					stdout: ioutil.Discard,
 					exit:   expectExitCode(t, 2),
 				}
@@ -56,7 +56,7 @@ func Test_GetOptions(t *testing.T) {
 			name: "missing input file",
 			args: func(t *testing.T) args {
 				return args{
-					stderr:    newExpectPrefixWriter(t, "missing input file: -i"),
+					stderr:    newExpectPrefixWriter(t, "missing input file"),
 					stdout:    ioutil.Discard,
 					exit:      expectExitCode(t, 2),
 					arguments: []string{"-l", "10"},
@@ -71,7 +71,7 @@ func Test_GetOptions(t *testing.T) {
 					arguments: []string{"-l", "10", "-i", "input.go", "-c", "TODO"},
 				}
 			},
-			got1: Options{
+			want1: Options{
 				LineNumber: 10,
 				InputFile:  "input.go",
 				OutputFile: "input_test.go",
@@ -85,8 +85,8 @@ func Test_GetOptions(t *testing.T) {
 			tArgs := tt.args(t)
 			got1 := GetOptions(tArgs.arguments, tArgs.stdout, tArgs.stderr, tArgs.exit)
 
-			if !reflect.DeepEqual(got1, tt.got1) {
-				t.Errorf("GetOptions got1 = %v, got1: %v", got1, tt.got1)
+			if !reflect.DeepEqual(got1, tt.want1) {
+				t.Errorf("GetOptions got1 = %v, want1: %v", got1, tt.want1)
 			}
 
 		})

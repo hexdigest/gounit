@@ -17,7 +17,7 @@ func Test_NewFunc(t *testing.T) {
 		name string
 		args func(t *testing.T) args
 
-		got1 *Func
+		want1 *Func
 	}{
 		{
 			name: "success",
@@ -27,7 +27,7 @@ func Test_NewFunc(t *testing.T) {
 					sig: &ast.FuncDecl{},
 				}
 			},
-			got1: &Func{
+			want1: &Func{
 				Signature: &ast.FuncDecl{},
 				fs:        token.NewFileSet(),
 			},
@@ -39,8 +39,8 @@ func Test_NewFunc(t *testing.T) {
 			tArgs := tt.args(t)
 			got1 := NewFunc(tArgs.fs, tArgs.sig)
 
-			if !reflect.DeepEqual(got1, tt.got1) {
-				t.Errorf("NewFunc got1 = %v, got1: %v", got1, tt.got1)
+			if !reflect.DeepEqual(got1, tt.want1) {
+				t.Errorf("NewFunc got1 = %v, want1: %v", got1, tt.want1)
 			}
 
 		})
@@ -54,7 +54,7 @@ func Test_Func_NumParams(t *testing.T) {
 		init    func(t *testing.T) *Func
 		inspect func(r *Func, t *testing.T) //inspects receiver after method run
 
-		got1 int
+		want1 int
 	}{
 		{
 			name: "success",
@@ -68,7 +68,7 @@ func Test_Func_NumParams(t *testing.T) {
 					Signature: fd,
 				}
 			},
-			got1: 0,
+			want1: 0,
 		},
 	}
 
@@ -82,8 +82,8 @@ func Test_Func_NumParams(t *testing.T) {
 				tt.inspect(receiver, t)
 			}
 
-			if !reflect.DeepEqual(got1, tt.got1) {
-				t.Errorf("Func.NumParams got1 = %v, got1: %v", got1, tt.got1)
+			if !reflect.DeepEqual(got1, tt.want1) {
+				t.Errorf("Func.NumParams got1 = %v, want1: %v", got1, tt.want1)
 			}
 
 		})
@@ -97,7 +97,7 @@ func Test_Func_NumResults(t *testing.T) {
 		init    func(t *testing.T) *Func
 		inspect func(r *Func, t *testing.T) //inspects receiver after method run
 
-		got1 int
+		want1 int
 	}{
 		{
 			name: "no results",
@@ -109,7 +109,7 @@ func Test_Func_NumResults(t *testing.T) {
 					Signature: fd,
 				}
 			},
-			got1: 0,
+			want1: 0,
 		},
 		{
 			name: "has results",
@@ -123,7 +123,7 @@ func Test_Func_NumResults(t *testing.T) {
 					Signature: fd,
 				}
 			},
-			got1: 2,
+			want1: 2,
 		},
 	}
 
@@ -137,8 +137,8 @@ func Test_Func_NumResults(t *testing.T) {
 				tt.inspect(receiver, t)
 			}
 
-			if !reflect.DeepEqual(got1, tt.got1) {
-				t.Errorf("Func.NumResults got1 = %v, got1: %v", got1, tt.got1)
+			if !reflect.DeepEqual(got1, tt.want1) {
+				t.Errorf("Func.NumResults got1 = %v, want1: %v", got1, tt.want1)
 			}
 
 		})
@@ -152,7 +152,7 @@ func Test_Func_Params(t *testing.T) {
 		init    func(t *testing.T) *Func
 		inspect func(r *Func, t *testing.T) //inspects receiver after method run
 
-		got1 []string
+		want1 []string
 	}{
 		{
 			name: "no params",
@@ -179,7 +179,7 @@ func Test_Func_Params(t *testing.T) {
 					},
 				}
 			},
-			got1: []string{"s1 string", "s2 string", "i3 []int"},
+			want1: []string{"s1 string", "s2 string", "i3 []int"},
 		},
 		{
 			name: "anonymous params",
@@ -196,7 +196,7 @@ func Test_Func_Params(t *testing.T) {
 					},
 				}
 			},
-			got1: []string{},
+			want1: []string{},
 		},
 	}
 
@@ -210,8 +210,8 @@ func Test_Func_Params(t *testing.T) {
 				tt.inspect(receiver, t)
 			}
 
-			if !reflect.DeepEqual(got1, tt.got1) {
-				t.Errorf("Func.Params got1 = %v, got1: %v", got1, tt.got1)
+			if !reflect.DeepEqual(got1, tt.want1) {
+				t.Errorf("Func.Params got1 = %v, want1: %v", got1, tt.want1)
 			}
 
 		})
@@ -225,7 +225,7 @@ func Test_Func_Results(t *testing.T) {
 		init    func(t *testing.T) *Func
 		inspect func(r *Func, t *testing.T) //inspects receiver after method run
 
-		got1 []string
+		want1 []string
 	}{
 		{
 			name: "no results",
@@ -248,7 +248,7 @@ func Test_Func_Results(t *testing.T) {
 					},
 				}
 			},
-			got1: []string{"got1 string", "got2 string", "got3 int"},
+			want1: []string{"got1 string", "got2 string", "got3 int"},
 		},
 		{
 			name: "anonymous results",
@@ -265,7 +265,7 @@ func Test_Func_Results(t *testing.T) {
 					},
 				}
 			},
-			got1: []string{"got1 string", "got2 int"},
+			want1: []string{"got1 string", "got2 int"},
 		},
 		{
 			name: "returns error",
@@ -282,7 +282,7 @@ func Test_Func_Results(t *testing.T) {
 					},
 				}
 			},
-			got1: []string{"got1 string"},
+			want1: []string{"got1 string"},
 		},
 	}
 
@@ -296,8 +296,8 @@ func Test_Func_Results(t *testing.T) {
 				tt.inspect(receiver, t)
 			}
 
-			if !reflect.DeepEqual(got1, tt.got1) {
-				t.Errorf("Func.Results got1 = %v, got1: %v", got1, tt.got1)
+			if !reflect.DeepEqual(got1, tt.want1) {
+				t.Errorf("Func.Results got1 = %v, want1: %v", got1, tt.want1)
 			}
 		})
 	}
@@ -310,7 +310,7 @@ func Test_Func_ParamsNames(t *testing.T) {
 		init    func(t *testing.T) *Func
 		inspect func(r *Func, t *testing.T) //inspects receiver after method run
 
-		got1 []string
+		want1 []string
 	}{
 		{
 			name: "no params",
@@ -337,7 +337,7 @@ func Test_Func_ParamsNames(t *testing.T) {
 					},
 				}
 			},
-			got1: []string{"s1", "s2", "i3"},
+			want1: []string{"s1", "s2", "i3"},
 		},
 		{
 			name: "anonymous params",
@@ -354,7 +354,7 @@ func Test_Func_ParamsNames(t *testing.T) {
 					},
 				}
 			},
-			got1: []string{},
+			want1: []string{},
 		},
 	}
 
@@ -368,8 +368,8 @@ func Test_Func_ParamsNames(t *testing.T) {
 				tt.inspect(receiver, t)
 			}
 
-			if !reflect.DeepEqual(got1, tt.got1) {
-				t.Errorf("Func.ParamsNames got1 = %v, got1: %v", got1, tt.got1)
+			if !reflect.DeepEqual(got1, tt.want1) {
+				t.Errorf("Func.ParamsNames got1 = %v, want1: %v", got1, tt.want1)
 			}
 
 		})
@@ -383,7 +383,7 @@ func Test_Func_ResultsNames(t *testing.T) {
 		init    func(t *testing.T) *Func
 		inspect func(r *Func, t *testing.T) //inspects receiver after method run
 
-		got1 []string
+		want1 []string
 	}{
 		{
 			name: "no results",
@@ -406,7 +406,7 @@ func Test_Func_ResultsNames(t *testing.T) {
 					},
 				}
 			},
-			got1: []string{"got1", "got2", "got3"},
+			want1: []string{"got1", "got2", "got3"},
 		},
 		{
 			name: "anonymous results",
@@ -423,7 +423,7 @@ func Test_Func_ResultsNames(t *testing.T) {
 					},
 				}
 			},
-			got1: []string{"got1", "got2"},
+			want1: []string{"got1", "got2"},
 		},
 		{
 			name: "returns error",
@@ -440,7 +440,7 @@ func Test_Func_ResultsNames(t *testing.T) {
 					},
 				}
 			},
-			got1: []string{"got1", "err"},
+			want1: []string{"got1", "err"},
 		},
 	}
 
@@ -454,8 +454,8 @@ func Test_Func_ResultsNames(t *testing.T) {
 				tt.inspect(receiver, t)
 			}
 
-			if !reflect.DeepEqual(got1, tt.got1) {
-				t.Errorf("Func.ResultsNames got1 = %v, got1: %v", got1, tt.got1)
+			if !reflect.DeepEqual(got1, tt.want1) {
+				t.Errorf("Func.ResultsNames got1 = %v, want1: %v", got1, tt.want1)
 			}
 
 		})
@@ -463,21 +463,20 @@ func Test_Func_ResultsNames(t *testing.T) {
 }
 
 func Test_Func_TestName(t *testing.T) {
-
 	tests := []struct {
 		name string
 
 		init    func(t *testing.T) *Func
 		inspect func(r *Func, t *testing.T) //inspects receiver after method run
 
-		got1 string
+		want1 string
 	}{
 		{
 			name: "func",
 			init: func(*testing.T) *Func {
 				return &Func{Signature: &ast.FuncDecl{Name: &ast.Ident{Name: "func"}}}
 			},
-			got1: "Test_func",
+			want1: "Test_func",
 		},
 		{
 			name: "method",
@@ -487,7 +486,7 @@ func Test_Func_TestName(t *testing.T) {
 					Recv: &ast.FieldList{List: []*ast.Field{{Type: &ast.Ident{Name: "*Receiver"}}}},
 				}}
 			},
-			got1: "Test_Receiver_method",
+			want1: "Test_Receiver_method",
 		},
 	}
 
@@ -501,8 +500,8 @@ func Test_Func_TestName(t *testing.T) {
 				tt.inspect(receiver, t)
 			}
 
-			if !reflect.DeepEqual(got1, tt.got1) {
-				t.Errorf("Func.TestName got1 = %v, got1: %v", got1, tt.got1)
+			if !reflect.DeepEqual(got1, tt.want1) {
+				t.Errorf("Func.TestName got1 = %v, want1: %v", got1, tt.want1)
 			}
 
 		})
@@ -516,7 +515,7 @@ func Test_Func_IsMethod(t *testing.T) {
 		init    func(t *testing.T) *Func
 		inspect func(r *Func, t *testing.T) //inspects receiver after method run
 
-		got1 bool
+		want1 bool
 	}{
 		{
 			name: "is not method",
@@ -529,13 +528,12 @@ func Test_Func_IsMethod(t *testing.T) {
 			init: func(*testing.T) *Func {
 				return &Func{Signature: &ast.FuncDecl{Recv: &ast.FieldList{}}}
 			},
-			got1: true,
+			want1: true,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-
 			receiver := tt.init(t)
 			got1 := receiver.IsMethod()
 
@@ -543,8 +541,8 @@ func Test_Func_IsMethod(t *testing.T) {
 				tt.inspect(receiver, t)
 			}
 
-			if !reflect.DeepEqual(got1, tt.got1) {
-				t.Errorf("Func.IsMethod got1 = %v, got1: %v", got1, tt.got1)
+			if !reflect.DeepEqual(got1, tt.want1) {
+				t.Errorf("Func.IsMethod got1 = %v, want1: %v", got1, tt.want1)
 			}
 
 		})
@@ -558,7 +556,7 @@ func Test_Func_ReceiverType(t *testing.T) {
 		init    func(t *testing.T) *Func
 		inspect func(r *Func, t *testing.T) //inspects receiver after method run
 
-		got1 string
+		want1 string
 	}{
 		{
 			name: "is not method",
@@ -571,7 +569,7 @@ func Test_Func_ReceiverType(t *testing.T) {
 			init: func(*testing.T) *Func {
 				return &Func{Signature: &ast.FuncDecl{Recv: &ast.FieldList{List: []*ast.Field{{Type: &ast.Ident{Name: "Receiver"}}}}}}
 			},
-			got1: "Receiver",
+			want1: "Receiver",
 		},
 	}
 
@@ -585,8 +583,8 @@ func Test_Func_ReceiverType(t *testing.T) {
 				tt.inspect(receiver, t)
 			}
 
-			if !reflect.DeepEqual(got1, tt.got1) {
-				t.Errorf("Func.ReceiverType got1 = %v, got1: %v", got1, tt.got1)
+			if !reflect.DeepEqual(got1, tt.want1) {
+				t.Errorf("Func.ReceiverType got1 = %v, want1: %v", got1, tt.want1)
 			}
 
 		})
@@ -600,7 +598,7 @@ func Test_Func_ReturnsError(t *testing.T) {
 		init    func(t *testing.T) *Func
 		inspect func(r *Func, t *testing.T) //inspects receiver after method run
 
-		got1 bool
+		want1 bool
 	}{
 		{
 			name: "no results",
@@ -639,7 +637,7 @@ func Test_Func_ReturnsError(t *testing.T) {
 					},
 				}
 			},
-			got1: true,
+			want1: true,
 		},
 	}
 
@@ -653,8 +651,8 @@ func Test_Func_ReturnsError(t *testing.T) {
 				tt.inspect(receiver, t)
 			}
 
-			if !reflect.DeepEqual(got1, tt.got1) {
-				t.Errorf("Func.ReturnsError got1 = %v, got1: %v", got1, tt.got1)
+			if !reflect.DeepEqual(got1, tt.want1) {
+				t.Errorf("Func.ReturnsError got1 = %v, want1: %v", got1, tt.want1)
 			}
 
 		})
@@ -668,7 +666,7 @@ func Test_Func_LastParam(t *testing.T) {
 		init    func(t *testing.T) *Func
 		inspect func(r *Func, t *testing.T) //inspects receiver after method run
 
-		got1 *ast.Field
+		want1 *ast.Field
 	}{
 		{
 			name: "no params",
@@ -697,7 +695,7 @@ func Test_Func_LastParam(t *testing.T) {
 					},
 				}
 			},
-			got1: &ast.Field{Type: &ast.Ident{Name: "int"}, Names: []*ast.Ident{{Name: "s3"}}},
+			want1: &ast.Field{Type: &ast.Ident{Name: "int"}, Names: []*ast.Ident{{Name: "s3"}}},
 		},
 	}
 
@@ -710,8 +708,8 @@ func Test_Func_LastParam(t *testing.T) {
 				tt.inspect(receiver, t)
 			}
 
-			if !reflect.DeepEqual(got1, tt.got1) {
-				t.Errorf("Func.LastParam got1 = %v, got1: %v", got1, tt.got1)
+			if !reflect.DeepEqual(got1, tt.want1) {
+				t.Errorf("Func.LastParam got1 = %v, want1: %v", got1, tt.want1)
 			}
 
 		})
@@ -725,7 +723,7 @@ func Test_Func_LastResult(t *testing.T) {
 		init    func(t *testing.T) *Func
 		inspect func(r *Func, t *testing.T) //inspects receiver after method run
 
-		got1 *ast.Field
+		want1 *ast.Field
 	}{
 		{
 			name: "no results",
@@ -750,7 +748,7 @@ func Test_Func_LastResult(t *testing.T) {
 					},
 				}
 			},
-			got1: &ast.Field{Type: &ast.Ident{Name: "int"}, Names: []*ast.Ident{{Name: "s3"}}},
+			want1: &ast.Field{Type: &ast.Ident{Name: "int"}, Names: []*ast.Ident{{Name: "s3"}}},
 		},
 	}
 
@@ -764,8 +762,8 @@ func Test_Func_LastResult(t *testing.T) {
 				tt.inspect(receiver, t)
 			}
 
-			if !reflect.DeepEqual(got1, tt.got1) {
-				t.Errorf("Func.LastResult got1 = %v, got1: %v", got1, tt.got1)
+			if !reflect.DeepEqual(got1, tt.want1) {
+				t.Errorf("Func.LastResult got1 = %v, want1: %v", got1, tt.want1)
 			}
 		})
 	}
@@ -778,7 +776,7 @@ func Test_Func_IsVariadic(t *testing.T) {
 		init    func(t *testing.T) *Func
 		inspect func(r *Func, t *testing.T) //inspects receiver after method run
 
-		got1 bool
+		want1 bool
 	}{
 		{
 			name: "no params",
@@ -821,7 +819,7 @@ func Test_Func_IsVariadic(t *testing.T) {
 					},
 				}
 			},
-			got1: true,
+			want1: true,
 		},
 	}
 
@@ -835,10 +833,45 @@ func Test_Func_IsVariadic(t *testing.T) {
 				tt.inspect(receiver, t)
 			}
 
-			if !reflect.DeepEqual(got1, tt.got1) {
-				t.Errorf("Func.IsVariadic got1 = %v, got1: %v", got1, tt.got1)
+			if !reflect.DeepEqual(got1, tt.want1) {
+				t.Errorf("Func.IsVariadic got1 = %v, want1: %v", got1, tt.want1)
 			}
 
+		})
+	}
+}
+
+func Test_Func_Name(t *testing.T) {
+	tests := []struct {
+		name string
+
+		init    func(t *testing.T) *Func
+		inspect func(r *Func, t *testing.T) //inspects receiver after test run
+
+		want1 string
+	}{
+		{
+			name: "success",
+			init: func(*testing.T) *Func {
+				return &Func{Signature: &ast.FuncDecl{Name: &ast.Ident{Name: "test"}}}
+			},
+			want1: "test",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			receiver := tt.init(t)
+
+			got1 := receiver.Name()
+
+			if tt.inspect != nil {
+				tt.inspect(receiver, t)
+			}
+
+			if !reflect.DeepEqual(got1, tt.want1) {
+				t.Errorf("Func.Name got1 = %v, want1: %v", got1, tt.want1)
+			}
 		})
 	}
 }

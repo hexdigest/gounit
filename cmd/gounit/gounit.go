@@ -105,7 +105,7 @@ func main() {
 
 	formattedSource, err := imports.Process(options.OutputFile, buf.Bytes(), nil)
 	if err != nil {
-		exit(ecOutputErr, "failed to fix imports: %v", err)
+		exit(ecOutputErr, "failed to fix imports %s\n: %v", string(buf.Bytes()), err)
 	}
 
 	if _, err = w.Write(formattedSource); err != nil {

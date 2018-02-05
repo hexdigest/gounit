@@ -244,7 +244,7 @@ func Test_NewGenerator(t *testing.T) {
 		name string
 		args func(t *testing.T) args
 
-		got1 *Generator
+		want1 *Generator
 	}{
 		{
 			name: "success",
@@ -255,7 +255,7 @@ func Test_NewGenerator(t *testing.T) {
 					opt: Options{Comment: "TODO:"},
 				}
 			},
-			got1: &Generator{
+			want1: &Generator{
 				fs:      token.NewFileSet(),
 				Func:    &Func{},
 				Comment: "TODO:",
@@ -268,8 +268,8 @@ func Test_NewGenerator(t *testing.T) {
 			tArgs := tt.args(t)
 			got1 := NewGenerator(tArgs.fs, tArgs.fn, tArgs.opt)
 
-			if !reflect.DeepEqual(got1, tt.got1) {
-				t.Errorf("NewGenerator got1 = %v, got1: %v", got1, tt.got1)
+			if !reflect.DeepEqual(got1, tt.want1) {
+				t.Errorf("NewGenerator got1 = %v, want1: %v", got1, tt.want1)
 			}
 		})
 	}

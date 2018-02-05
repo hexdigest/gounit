@@ -10,6 +10,7 @@ import (
 //Options contains parsed command line options
 type Options struct {
 	LineNumber int
+	Function   string
 	InputFile  string
 	OutputFile string
 	Comment    string
@@ -28,9 +29,10 @@ func GetOptions(arguments []string, stdout, stderr io.Writer, exit exitFunc) Opt
 		useStdin   = flagset.Bool("stdin", false, "use stdin rather than reading the input file")
 		useStdout  = flagset.Bool("stdout", false, "use stdout rather than writing to the output file")
 		lineNumber = flagset.Uint("l", 0, "number of the line (starting with 1) with the function declaration")
-		inputFile  = flagset.String("i", "", "input file (optional)")
-		outputFile = flagset.String("o", "", "output file")
-		comment    = flagset.String("c", "", "comment that will be inserted to the generated test")
+		function   = flagset.String("f", "", "tested function name")
+		inputFile  = flagset.String("i", "", "input file")
+		outputFile = flagset.String("o", "", "output file (optional)")
+		comment    = flagset.String("c", "", "comment that will be inserted into the generated test")
 	)
 
 	flagset.Parse(arguments)
@@ -42,12 +44,12 @@ func GetOptions(arguments []string, stdout, stderr io.Writer, exit exitFunc) Opt
 	}
 
 	var errors []string
-	if *lineNumber == 0 {
-		errors = append(errors, "missing line number: -l")
+	if *lineNumber == 0 && *function == "" {
+		errors = append(errors, "missing line number or function name")
 	}
 
 	if *inputFile == "" {
-		errors = append(errors, "missing input file: -i")
+		errors = append(errors, "missing input file")
 	}
 
 	if *outputFile == "" {
@@ -70,6 +72,7 @@ func GetOptions(arguments []string, stdout, stderr io.Writer, exit exitFunc) Opt
 
 	return Options{
 		LineNumber: int(*lineNumber),
+		Function:   *function,
 		InputFile:  *inputFile,
 		OutputFile: *outputFile,
 		Comment:    *comment,

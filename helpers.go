@@ -23,7 +23,7 @@ func FindSourceFunc(fs *token.FileSet, file *ast.File, opt Options) (*Func, erro
 	}
 
 	visitor := NewVisitor(func(fd *ast.FuncDecl) bool {
-		return fs.Position(fd.Pos()).Line == opt.LineNumber
+		return fs.Position(fd.Pos()).Line == opt.LineNumber || fd.Name.Name == opt.Function
 	})
 
 	ast.Walk(visitor, file)

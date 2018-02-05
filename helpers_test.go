@@ -21,7 +21,7 @@ func Test_IsTestExist(t *testing.T) {
 		name string
 		args func(t *testing.T) args
 
-		got1       bool
+		want1      bool
 		wantErr    bool
 		inspectErr func(err error, t *testing.T) //use for more precise error evaluation after test
 
@@ -61,7 +61,7 @@ func Test_IsTestExist(t *testing.T) {
 					fn: &Func{Signature: &ast.FuncDecl{Name: &ast.Ident{Name: "test"}}},
 				}
 			},
-			got1:    true,
+			want1:   true,
 			wantErr: false,
 		},
 	}
@@ -71,8 +71,8 @@ func Test_IsTestExist(t *testing.T) {
 			tArgs := tt.args(t)
 			got1, err := IsTestExist(tArgs.fs, tArgs.r, tArgs.fn, tArgs.opt)
 
-			if !reflect.DeepEqual(got1, tt.got1) {
-				t.Errorf("IsTestExist got1 = %v, got1: %v", got1, tt.got1)
+			if !reflect.DeepEqual(got1, tt.want1) {
+				t.Errorf("IsTestExist got1 = %v, want1: %v", got1, tt.want1)
 			}
 
 			if (err != nil) != tt.wantErr {
@@ -98,7 +98,7 @@ func Test_FindSourceFunc(t *testing.T) {
 		name string
 		args func(t *testing.T) args
 
-		got1       *Func
+		want1      *Func
 		wantErr    bool
 		inspectErr func(err error, t *testing.T) //use for more precise error evaluation after test
 
@@ -161,8 +161,8 @@ func Test_FindSourceFunc(t *testing.T) {
 			tArgs := tt.args(t)
 			got1, err := FindSourceFunc(tArgs.fs, tArgs.file, tArgs.opt)
 
-			if !reflect.DeepEqual(got1, tt.got1) {
-				t.Errorf("FindSourceFunc got1 = %v, got1: %v", got1, tt.got1)
+			if !reflect.DeepEqual(got1, tt.want1) {
+				t.Errorf("FindSourceFunc got1 = %v, want1: %v", got1, tt.want1)
 			}
 
 			if (err != nil) != tt.wantErr {
@@ -186,7 +186,7 @@ func Test_nodeToString(t *testing.T) {
 		name string
 		args func(t *testing.T) args
 
-		got1 string
+		want1 string
 	}{
 		{
 			name: "success",
@@ -196,7 +196,7 @@ func Test_nodeToString(t *testing.T) {
 					n:  &ast.Ident{Name: "node"},
 				}
 			},
-			got1: "node",
+			want1: "node",
 		},
 	}
 
@@ -205,8 +205,8 @@ func Test_nodeToString(t *testing.T) {
 			tArgs := tt.args(t)
 			got1 := nodeToString(tArgs.fs, tArgs.n)
 
-			if !reflect.DeepEqual(got1, tt.got1) {
-				t.Errorf("nodeToString got1 = %v, got1: %v", got1, tt.got1)
+			if !reflect.DeepEqual(got1, tt.want1) {
+				t.Errorf("nodeToString got1 = %v, want1: %v", got1, tt.want1)
 			}
 
 		})

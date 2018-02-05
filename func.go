@@ -135,6 +135,11 @@ func (f *Func) ResultsNames() []string {
 	return names
 }
 
+//Name returns a name of func
+func (f *Func) Name() string {
+	return f.Signature.Name.String()
+}
+
 //TestName returns a name of the test
 func (f *Func) TestName() string {
 	name := "Test_"
