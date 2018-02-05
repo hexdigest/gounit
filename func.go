@@ -26,6 +26,9 @@ func (f *Func) NumParams() int {
 
 //NumResults returns a number of the function results
 func (f *Func) NumResults() int {
+	if f.Signature.Type.Results == nil {
+		return 0
+	}
 	return f.Signature.Type.Results.NumFields()
 }
 
@@ -39,8 +42,8 @@ func (f *Func) Params() []string {
 	for i, p := range f.Signature.Type.Params.List {
 		for _, n := range p.Names {
 			param := n.Name
-			if i == f.NumParams()-1 && f.IsVariadic() {
-				param = "[]" + param + " " + nodeToString(f.fs, p.Type.(*ast.Ellipsis).Elt)
+			if i == len(f.Signature.Type.Params.List)-1 && f.IsVariadic() {
+				param += " []" + nodeToString(f.fs, p.Type.(*ast.Ellipsis).Elt)
 			} else {
 				param += " " + nodeToString(f.fs, p.Type)
 			}
@@ -139,12 +142,7 @@ func (f *Func) TestName() string {
 		name += strings.Replace(f.ReceiverType(), "*", "", -1) + "_"
 	}
 
-	return name + f.Name()
-}
-
-//Name returns function name
-func (f *Func) Name() string {
-	return f.Signature.Name.String()
+	return name + f.Signature.Name.String()
 }
 
 //IsMethod returns true if the function is a method
@@ -174,7 +172,7 @@ func (f *Func) ReturnsError() bool {
 
 //LastParam returns function's last param
 func (f *Func) LastParam() *ast.Field {
-	numFields := f.Signature.Type.Params.NumFields()
+	numFields := len(f.Signature.Type.Params.List)
 	if numFields == 0 {
 		return nil
 	}
@@ -184,7 +182,11 @@ func (f *Func) LastParam() *ast.Field {
 
 //LastResult returns function's last result
 func (f *Func) LastResult() *ast.Field {
-	numFields := f.Signature.Type.Results.NumFields()
+	if f.Signature.Type.Results == nil {
+		return nil
+	}
+
+	numFields := len(f.Signature.Type.Results.List)
 	if numFields == 0 {
 		return nil
 	}

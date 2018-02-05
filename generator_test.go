@@ -2,8 +2,10 @@ package gounit
 
 import (
 	"go/ast"
+	"go/token"
 	"io"
 	"io/ioutil"
+	"reflect"
 	"strings"
 	"testing"
 	"text/template"
@@ -227,6 +229,48 @@ func Test_Generator_WriteTest(t *testing.T) {
 				tt.inspectErr(err, t)
 			}
 
+		})
+	}
+}
+
+func Test_NewGenerator(t *testing.T) {
+	type args struct {
+		fs  *token.FileSet
+		fn  *Func
+		opt Options
+	}
+
+	tests := []struct {
+		name string
+		args func(t *testing.T) args
+
+		got1 *Generator
+	}{
+		{
+			name: "success",
+			args: func(*testing.T) args {
+				return args{
+					fs:  token.NewFileSet(),
+					fn:  &Func{},
+					opt: Options{Comment: "TODO:"},
+				}
+			},
+			got1: &Generator{
+				fs:      token.NewFileSet(),
+				Func:    &Func{},
+				Comment: "TODO:",
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tArgs := tt.args(t)
+			got1 := NewGenerator(tArgs.fs, tArgs.fn, tArgs.opt)
+
+			if !reflect.DeepEqual(got1, tt.got1) {
+				t.Errorf("NewGenerator got1 = %v, got1: %v", got1, tt.got1)
+			}
 		})
 	}
 }
