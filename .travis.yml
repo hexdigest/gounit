@@ -8,7 +8,7 @@ before_install:
   - go get golang.org/x/tools/imports
   - if ! go get github.com/golang/tools/cmd/cover; then go get golang.org/x/tools/cmd/cover; fi
 script:
-  - go test ./...
+  - go test -race ./...
   - go test -c -covermode=count -coverpkg=github.com/hexdigest/gounit
   - ./gounit.test -test.coverprofile coverage.cov
   - $HOME/gopath/bin/goveralls -service=travis-ci -coverprofile=coverage.cov
