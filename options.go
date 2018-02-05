@@ -25,7 +25,7 @@ func GetOptions(arguments []string, stdout, stderr io.Writer, exit exitFunc) Opt
 	var (
 		flagset    = flag.NewFlagSet("gounit", flag.ExitOnError)
 		showHelp   = flagset.Bool("h", false, "display this help text and exit")
-		useStdin   = flagset.Bool("stdin", false, "use stdin rather than reading the the input file")
+		useStdin   = flagset.Bool("stdin", false, "use stdin rather than reading the input file")
 		useStdout  = flagset.Bool("stdout", false, "use stdout rather than writing to the output file")
 		lineNumber = flagset.Uint("l", 0, "number of the line (starting with 1) with the function declaration")
 		inputFile  = flagset.String("i", "", "input file (optional)")
