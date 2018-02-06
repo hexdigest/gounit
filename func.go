@@ -4,19 +4,17 @@ import (
 	"fmt"
 	"go/ast"
 	"go/token"
-	"strings"
 )
 
 //Func is a wrapper around ast.FuncDecl containing few methods
 //to use within a test template
 type Func struct {
 	Signature *ast.FuncDecl
-	fs        *token.FileSet
 }
 
 //NewFunc returns pointer to the Func struct
-func NewFunc(fs *token.FileSet, sig *ast.FuncDecl) *Func {
-	return &Func{Signature: sig, fs: fs}
+func NewFunc(sig *ast.FuncDecl) *Func {
+	return &Func{Signature: sig}
 }
 
 //NumParams returns a number of the function params
@@ -33,7 +31,7 @@ func (f *Func) NumResults() int {
 }
 
 //Params returns a list of the function params with their types
-func (f *Func) Params() []string {
+func (f *Func) Params(fs *token.FileSet) []string {
 	if f.Signature.Type.Params == nil {
 		return nil
 	}
@@ -43,9 +41,9 @@ func (f *Func) Params() []string {
 		for _, n := range p.Names {
 			param := n.Name
 			if i == len(f.Signature.Type.Params.List)-1 && f.IsVariadic() {
-				param += " []" + nodeToString(f.fs, p.Type.(*ast.Ellipsis).Elt)
+				param += " []" + nodeToString(fs, p.Type.(*ast.Ellipsis).Elt)
 			} else {
-				param += " " + nodeToString(f.fs, p.Type)
+				param += " " + nodeToString(fs, p.Type)
 			}
 
 			params = append(params, param)
@@ -57,7 +55,7 @@ func (f *Func) Params() []string {
 
 //Results returns a list of the function results with their types
 //if function's last param is an error it is not included in the result slice
-func (f *Func) Results() []string {
+func (f *Func) Results(fs *token.FileSet) []string {
 	if f.Signature.Type.Results == nil {
 		return nil
 	}
@@ -69,11 +67,11 @@ func (f *Func) Results() []string {
 	for _, r := range f.Signature.Type.Results.List {
 		if len(r.Names) > 0 {
 			for range r.Names {
-				results = append(results, fmt.Sprintf("got%d %s", n, nodeToString(f.fs, r.Type)))
+				results = append(results, fmt.Sprintf("got%d %s", n, nodeToString(fs, r.Type)))
 				n++
 			}
 		} else {
-			results = append(results, fmt.Sprintf("got%d %s", n, nodeToString(f.fs, r.Type)))
+			results = append(results, fmt.Sprintf("got%d %s", n, nodeToString(fs, r.Type)))
 			n++
 		}
 	}
@@ -144,7 +142,13 @@ func (f *Func) Name() string {
 func (f *Func) TestName() string {
 	name := "Test"
 	if f.IsMethod() {
-		name += strings.Replace(f.ReceiverType(), "*", "", 1) + "_"
+		recvType := f.ReceiverType()
+		if star, ok := recvType.(*ast.StarExpr); ok {
+			name += star.X.(*ast.Ident).String()
+		} else {
+			name += recvType.(*ast.Ident).String()
+		}
+		name += "_"
 	} else if !f.Signature.Name.IsExported() {
 		name += "_"
 	}
@@ -158,12 +162,11 @@ func (f *Func) IsMethod() bool {
 }
 
 //ReceiverType returns a type of the method receiver
-func (f *Func) ReceiverType() string {
+func (f *Func) ReceiverType() ast.Expr {
 	if f.Signature.Recv == nil {
-		return ""
+		return nil
 	}
-
-	return nodeToString(f.fs, f.Signature.Recv.List[0].Type)
+	return f.Signature.Recv.List[0].Type
 }
 
 //ReturnsError returns true if the function's last param's type is error

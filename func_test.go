@@ -9,7 +9,6 @@ import (
 
 func TestNewFunc(t *testing.T) {
 	type args struct {
-		fs  *token.FileSet
 		sig *ast.FuncDecl
 	}
 
@@ -23,13 +22,11 @@ func TestNewFunc(t *testing.T) {
 			name: "success",
 			args: func(*testing.T) args {
 				return args{
-					fs:  token.NewFileSet(),
 					sig: &ast.FuncDecl{},
 				}
 			},
 			want1: &Func{
 				Signature: &ast.FuncDecl{},
-				fs:        token.NewFileSet(),
 			},
 		},
 	}
@@ -37,7 +34,7 @@ func TestNewFunc(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			tArgs := tt.args(t)
-			got1 := NewFunc(tArgs.fs, tArgs.sig)
+			got1 := NewFunc(tArgs.sig)
 
 			if !reflect.DeepEqual(got1, tt.want1) {
 				t.Errorf("NewFunc got1 = %v, want1: %v", got1, tt.want1)
@@ -146,9 +143,12 @@ func TestFunc_NumResults(t *testing.T) {
 }
 
 func TestFunc_Params(t *testing.T) {
+	type args struct {
+		fs *token.FileSet
+	}
 	tests := []struct {
-		name string
-
+		name    string
+		args    func(t *testing.T) args
 		init    func(t *testing.T) *Func
 		inspect func(r *Func, t *testing.T) //inspects receiver after method run
 
@@ -156,6 +156,11 @@ func TestFunc_Params(t *testing.T) {
 	}{
 		{
 			name: "no params",
+			args: func(t *testing.T) args {
+				return args{
+					fs: token.NewFileSet(),
+				}
+			},
 			init: func(*testing.T) *Func {
 				return &Func{
 					Signature: &ast.FuncDecl{
@@ -166,9 +171,13 @@ func TestFunc_Params(t *testing.T) {
 		},
 		{
 			name: "params with names",
+			args: func(t *testing.T) args {
+				return args{
+					fs: token.NewFileSet(),
+				}
+			},
 			init: func(*testing.T) *Func {
 				return &Func{
-					fs: token.NewFileSet(),
 					Signature: &ast.FuncDecl{
 						Type: &ast.FuncType{Params: &ast.FieldList{
 							List: []*ast.Field{
@@ -183,9 +192,13 @@ func TestFunc_Params(t *testing.T) {
 		},
 		{
 			name: "anonymous params",
+			args: func(t *testing.T) args {
+				return args{
+					fs: token.NewFileSet(),
+				}
+			},
 			init: func(*testing.T) *Func {
 				return &Func{
-					fs: token.NewFileSet(),
 					Signature: &ast.FuncDecl{
 						Type: &ast.FuncType{Params: &ast.FieldList{
 							List: []*ast.Field{
@@ -204,7 +217,7 @@ func TestFunc_Params(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 
 			receiver := tt.init(t)
-			got1 := receiver.Params()
+			got1 := receiver.Params(tt.args(t).fs)
 
 			if tt.inspect != nil {
 				tt.inspect(receiver, t)
@@ -219,9 +232,13 @@ func TestFunc_Params(t *testing.T) {
 }
 
 func TestFunc_Results(t *testing.T) {
-	tests := []struct {
-		name string
+	type args struct {
+		fs *token.FileSet
+	}
 
+	tests := []struct {
+		name    string
+		args    func(t *testing.T) args
 		init    func(t *testing.T) *Func
 		inspect func(r *Func, t *testing.T) //inspects receiver after method run
 
@@ -229,15 +246,24 @@ func TestFunc_Results(t *testing.T) {
 	}{
 		{
 			name: "no results",
+			args: func(t *testing.T) args {
+				return args{
+					fs: token.NewFileSet(),
+				}
+			},
 			init: func(*testing.T) *Func {
 				return &Func{Signature: &ast.FuncDecl{Type: &ast.FuncType{}}}
 			},
 		},
 		{
 			name: "results with names",
+			args: func(t *testing.T) args {
+				return args{
+					fs: token.NewFileSet(),
+				}
+			},
 			init: func(*testing.T) *Func {
 				return &Func{
-					fs: token.NewFileSet(),
 					Signature: &ast.FuncDecl{
 						Type: &ast.FuncType{Results: &ast.FieldList{
 							List: []*ast.Field{
@@ -252,9 +278,13 @@ func TestFunc_Results(t *testing.T) {
 		},
 		{
 			name: "anonymous results",
+			args: func(t *testing.T) args {
+				return args{
+					fs: token.NewFileSet(),
+				}
+			},
 			init: func(*testing.T) *Func {
 				return &Func{
-					fs: token.NewFileSet(),
 					Signature: &ast.FuncDecl{
 						Type: &ast.FuncType{Results: &ast.FieldList{
 							List: []*ast.Field{
@@ -269,9 +299,13 @@ func TestFunc_Results(t *testing.T) {
 		},
 		{
 			name: "returns error",
+			args: func(t *testing.T) args {
+				return args{
+					fs: token.NewFileSet(),
+				}
+			},
 			init: func(*testing.T) *Func {
 				return &Func{
-					fs: token.NewFileSet(),
 					Signature: &ast.FuncDecl{
 						Type: &ast.FuncType{Results: &ast.FieldList{
 							List: []*ast.Field{
@@ -290,7 +324,7 @@ func TestFunc_Results(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 
 			receiver := tt.init(t)
-			got1 := receiver.Results()
+			got1 := receiver.Results(tt.args(t).fs)
 
 			if tt.inspect != nil {
 				tt.inspect(receiver, t)
@@ -326,7 +360,6 @@ func TestFunc_ParamsNames(t *testing.T) {
 			name: "params with names",
 			init: func(*testing.T) *Func {
 				return &Func{
-					fs: token.NewFileSet(),
 					Signature: &ast.FuncDecl{
 						Type: &ast.FuncType{Params: &ast.FieldList{
 							List: []*ast.Field{
@@ -343,7 +376,6 @@ func TestFunc_ParamsNames(t *testing.T) {
 			name: "anonymous params",
 			init: func(*testing.T) *Func {
 				return &Func{
-					fs: token.NewFileSet(),
 					Signature: &ast.FuncDecl{
 						Type: &ast.FuncType{Params: &ast.FieldList{
 							List: []*ast.Field{
@@ -395,7 +427,6 @@ func TestFunc_ResultsNames(t *testing.T) {
 			name: "results with names",
 			init: func(*testing.T) *Func {
 				return &Func{
-					fs: token.NewFileSet(),
 					Signature: &ast.FuncDecl{
 						Type: &ast.FuncType{Results: &ast.FieldList{
 							List: []*ast.Field{
@@ -412,7 +443,6 @@ func TestFunc_ResultsNames(t *testing.T) {
 			name: "anonymous results",
 			init: func(*testing.T) *Func {
 				return &Func{
-					fs: token.NewFileSet(),
 					Signature: &ast.FuncDecl{
 						Type: &ast.FuncType{Results: &ast.FieldList{
 							List: []*ast.Field{
@@ -429,7 +459,6 @@ func TestFunc_ResultsNames(t *testing.T) {
 			name: "returns error",
 			init: func(*testing.T) *Func {
 				return &Func{
-					fs: token.NewFileSet(),
 					Signature: &ast.FuncDecl{
 						Type: &ast.FuncType{Results: &ast.FieldList{
 							List: []*ast.Field{
@@ -490,7 +519,7 @@ func TestFunc_TestName(t *testing.T) {
 			init: func(*testing.T) *Func {
 				return &Func{Signature: &ast.FuncDecl{
 					Name: &ast.Ident{Name: "method"},
-					Recv: &ast.FieldList{List: []*ast.Field{{Type: &ast.Ident{Name: "*Receiver"}}}},
+					Recv: &ast.FieldList{List: []*ast.Field{{Type: &ast.Ident{Name: "Receiver"}}}},
 				}}
 			},
 			want1: "TestReceiver_method",
@@ -500,7 +529,17 @@ func TestFunc_TestName(t *testing.T) {
 			init: func(*testing.T) *Func {
 				return &Func{Signature: &ast.FuncDecl{
 					Name: &ast.Ident{Name: "Method"},
-					Recv: &ast.FieldList{List: []*ast.Field{{Type: &ast.Ident{Name: "*Receiver"}}}},
+					Recv: &ast.FieldList{List: []*ast.Field{{Type: &ast.Ident{Name: "Receiver"}}}},
+				}}
+			},
+			want1: "TestReceiver_Method",
+		},
+		{
+			name: "Pointer method",
+			init: func(*testing.T) *Func {
+				return &Func{Signature: &ast.FuncDecl{
+					Name: &ast.Ident{Name: "Method"},
+					Recv: &ast.FieldList{List: []*ast.Field{{Type: &ast.StarExpr{X: &ast.Ident{Name: "Receiver"}}}}},
 				}}
 			},
 			want1: "TestReceiver_Method",
@@ -573,7 +612,7 @@ func TestFunc_ReceiverType(t *testing.T) {
 		init    func(t *testing.T) *Func
 		inspect func(r *Func, t *testing.T) //inspects receiver after method run
 
-		want1 string
+		want1 ast.Expr
 	}{
 		{
 			name: "is not method",
@@ -586,7 +625,7 @@ func TestFunc_ReceiverType(t *testing.T) {
 			init: func(*testing.T) *Func {
 				return &Func{Signature: &ast.FuncDecl{Recv: &ast.FieldList{List: []*ast.Field{{Type: &ast.Ident{Name: "Receiver"}}}}}}
 			},
-			want1: "Receiver",
+			want1: &ast.Ident{Name: "Receiver"},
 		},
 	}
 
@@ -627,7 +666,6 @@ func TestFunc_ReturnsError(t *testing.T) {
 			name: "no error",
 			init: func(*testing.T) *Func {
 				return &Func{
-					fs: token.NewFileSet(),
 					Signature: &ast.FuncDecl{
 						Type: &ast.FuncType{Results: &ast.FieldList{
 							List: []*ast.Field{
@@ -643,7 +681,6 @@ func TestFunc_ReturnsError(t *testing.T) {
 			name: "returns error",
 			init: func(*testing.T) *Func {
 				return &Func{
-					fs: token.NewFileSet(),
 					Signature: &ast.FuncDecl{
 						Type: &ast.FuncType{Results: &ast.FieldList{
 							List: []*ast.Field{
@@ -701,7 +738,6 @@ func TestFunc_LastParam(t *testing.T) {
 			name: "has params",
 			init: func(*testing.T) *Func {
 				return &Func{
-					fs: token.NewFileSet(),
 					Signature: &ast.FuncDecl{
 						Type: &ast.FuncType{Params: &ast.FieldList{
 							List: []*ast.Field{
@@ -754,7 +790,6 @@ func TestFunc_LastResult(t *testing.T) {
 			name: "has results",
 			init: func(*testing.T) *Func {
 				return &Func{
-					fs: token.NewFileSet(),
 					Signature: &ast.FuncDecl{
 						Type: &ast.FuncType{Results: &ast.FieldList{
 							List: []*ast.Field{
@@ -809,7 +844,6 @@ func TestFunc_IsVariadic(t *testing.T) {
 			name: "is not variadic",
 			init: func(*testing.T) *Func {
 				return &Func{
-					fs: token.NewFileSet(),
 					Signature: &ast.FuncDecl{
 						Type: &ast.FuncType{Params: &ast.FieldList{
 							List: []*ast.Field{
@@ -825,7 +859,6 @@ func TestFunc_IsVariadic(t *testing.T) {
 			name: "is variadic",
 			init: func(*testing.T) *Func {
 				return &Func{
-					fs: token.NewFileSet(),
 					Signature: &ast.FuncDecl{
 						Type: &ast.FuncType{Params: &ast.FieldList{
 							List: []*ast.Field{

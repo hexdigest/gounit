@@ -3,7 +3,6 @@ package main
 import (
 	"bytes"
 	"fmt"
-	"go/parser"
 	"go/token"
 	"io"
 	"os"
@@ -16,18 +15,18 @@ func main() {
 	options := gounit.GetOptions(os.Args[1:], os.Stdout, os.Stderr, os.Exit)
 
 	var (
-		r      io.Reader
-		w      io.Writer
-		err    error
-		append bool
-		fs     = token.NewFileSet()
-		buf    = bytes.NewBuffer([]byte{})
+		r, testSrc io.Reader
+		w          io.Writer
+		err        error
+		append     bool
+		fs         = token.NewFileSet()
+		buf        = bytes.NewBuffer([]byte{})
 	)
 
 	r, err = os.Open(options.InputFile)
 	if err != nil {
 		if !os.IsNotExist(err) {
-			exit(gounit.ErrFailedToOpenInFile, err)
+			exit(gounit.ErrFailedToOpenInFile.Format(err))
 		}
 
 		if !options.UseStdin {
@@ -37,83 +36,67 @@ func main() {
 		r = os.Stdin
 	}
 
-	file, err := parser.ParseFile(fs, options.InputFile, r, 0)
-	if err != nil {
-		exit(gounit.ErrFailedToParseInFile, err)
-	}
-
-	funcDecl, err := gounit.FindSourceFunc(fs, file, options)
-	if err != nil {
-		exit(gounit.ErrFailedToFindSourceFunc, err)
-	}
-
-	if funcDecl == nil {
-		exit(gounit.ErrFuncNotFound)
-	}
-
-	foundFunc := gounit.NewFunc(fs, funcDecl)
-
 	outFile, err := os.OpenFile(options.OutputFile, os.O_RDWR, 0600)
 	if err != nil {
 		if !os.IsNotExist(err) {
-			exit(gounit.ErrFailedToOpenOutFile, err)
+			exit(gounit.ErrFailedToOpenOutFile.Format(err))
 		}
 
 		if !options.UseStdout {
 			if outFile, err = os.OpenFile(options.OutputFile, os.O_CREATE|os.O_WRONLY, 0600); err != nil {
-				exit(gounit.ErrFailedToCreateOutFile, err)
+				exit(gounit.ErrFailedToCreateOutFile.Format(err))
 			}
 		}
 	} else {
-		//using TeeReader to read the contents of the output file into the write buffer
-		//so we can just append a new test to the end of the buffer
-		tr := io.TeeReader(outFile, buf)
+		testSrc = io.TeeReader(outFile, buf)
 		append = true
-
-		isExist, err := gounit.IsTestExist(fs, tr, foundFunc, options)
-		if err != nil {
-			exit(gounit.ErrFailedToParseOutFile, err)
-		}
-
-		if isExist {
-			exit(gounit.ErrTestIsAlreadyExist)
-		}
-
-		if _, err := outFile.Seek(0, 0); err != nil {
-			exit(gounit.ErrSeekFailed, err)
-		}
 	}
-	w = outFile
+
 	defer outFile.Close()
 
+	w = outFile
 	if options.UseStdout {
 		w = os.Stdout
 	}
 
-	generator := gounit.NewGenerator(fs, foundFunc, options)
+	generator, err := gounit.NewGenerator(fs, options, r, testSrc)
+	if err != nil {
+		exit(err)
+	}
 
-	if !append {
-		if err := generator.WriteHeader(buf, file.Name.String(), file.Imports); err != nil {
-			exit(gounit.ErrGenerateHeader, err)
+	//rewind output file back
+	if seeker, ok := w.(io.Seeker); ok {
+		if _, err := seeker.Seek(0, 0); err != nil {
+			exit(gounit.ErrSeekFailed.Format(err))
 		}
 	}
 
-	if err := generator.WriteTest(buf); err != nil {
-		exit(gounit.ErrGenerateTest, err)
+	if !append {
+		if err := generator.WriteHeader(buf); err != nil {
+			exit(gounit.ErrGenerateHeader.Format(err))
+		}
+	}
+
+	if err := generator.WriteTests(buf); err != nil {
+		exit(gounit.ErrGenerateTest.Format(err))
 	}
 
 	formattedSource, err := imports.Process(options.OutputFile, buf.Bytes(), nil)
 	if err != nil {
-		fmt.Println(string(buf.Bytes()))
-		exit(gounit.ErrFixImports, err)
+		exit(gounit.ErrFixImports.Format(err))
 	}
 
 	if _, err = w.Write(formattedSource); err != nil {
-		exit(gounit.ErrWriteTest, err)
+		exit(gounit.ErrWriteTest.Format(err))
 	}
 }
 
-func exit(e gounit.Error, args ...interface{}) {
-	fmt.Fprintf(os.Stderr, "%v\n", e.Format(args...))
-	os.Exit(e.Code())
+func exit(err error) {
+	var code = gounit.ExitCodeErrGeneric
+	if gerr, ok := err.(*gounit.Error); ok {
+		code = gerr.Code()
+	}
+
+	fmt.Fprintf(os.Stderr, "%v\n", err)
+	os.Exit(code)
 }

@@ -6,9 +6,9 @@ import (
 
 type matchFunc func(*ast.FuncDecl) bool
 
-//Visitor finds first function declaration that matches the match func
+//Visitor finds all matching func declarations
 type Visitor struct {
-	found *ast.FuncDecl
+	found []*Func
 	match matchFunc
 }
 
@@ -17,23 +17,18 @@ func NewVisitor(match matchFunc) *Visitor {
 	return &Visitor{match: match}
 }
 
-// Visit implements ast.Visitor interface
+//Visit implements ast.Visitor interface
 func (v *Visitor) Visit(node ast.Node) ast.Visitor {
-	if v.found != nil {
-		return nil
-	}
-
 	if fd, ok := node.(*ast.FuncDecl); ok {
 		if v.match(fd) {
-			v.found = fd
-			return nil
+			v.found = append(v.found, NewFunc(fd))
 		}
 	}
 
 	return v
 }
 
-//Func returns found function declaration
-func (v *Visitor) Func() *ast.FuncDecl {
+//Func returns found functions
+func (v *Visitor) Funcs() []*Func {
 	return v.found
 }

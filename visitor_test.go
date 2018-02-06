@@ -46,6 +46,10 @@ func TestVisitor_Visit(t *testing.T) {
 		return false
 	})
 
+	var foundVisitor = NewVisitor(func(*ast.FuncDecl) bool {
+		return true
+	})
+
 	tests := []struct {
 		name    string
 		args    func(t *testing.T) args
@@ -63,7 +67,7 @@ func TestVisitor_Visit(t *testing.T) {
 		{
 			name: "func found",
 			init: func(*testing.T) *Visitor {
-				return &Visitor{match: func(*ast.FuncDecl) bool { return true }}
+				return foundVisitor
 			},
 			args: func(*testing.T) args {
 				return args{
@@ -75,19 +79,7 @@ func TestVisitor_Visit(t *testing.T) {
 					t.Errorf("expected non-nil v.found")
 				}
 			},
-			want1: nil,
-		},
-		{
-			name: "func was already found",
-			init: func(*testing.T) *Visitor {
-				return &Visitor{found: &ast.FuncDecl{}}
-			},
-			args: func(*testing.T) args {
-				return args{
-					node: nil,
-				}
-			},
-			want1: nil,
+			want1: foundVisitor,
 		},
 	}
 

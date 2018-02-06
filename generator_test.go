@@ -1,11 +1,8 @@
 package gounit
 
 import (
-	"go/ast"
-	"go/token"
 	"io"
 	"io/ioutil"
-	"reflect"
 	"strings"
 	"testing"
 	"text/template"
@@ -135,57 +132,6 @@ func TestGenerator_processTemplate(t *testing.T) {
 
 func TestGenerator_WriteHeader(t *testing.T) {
 	type args struct {
-		w       io.Writer
-		pkg     string
-		imports []*ast.ImportSpec
-	}
-
-	tests := []struct {
-		name    string
-		args    func(t *testing.T) args
-		init    func(t *testing.T) *Generator
-		inspect func(r *Generator, t *testing.T) //inspects receiver after method run
-
-		wantErr    bool
-		inspectErr func(err error, t *testing.T) //use for more precise error evaluation after test
-
-	}{
-		{
-			name: "bad writer",
-			args: func(t *testing.T) args {
-				return args{
-					w: errorWriter{io.EOF},
-				}
-			},
-			init:    func(t *testing.T) *Generator { return &Generator{} },
-			wantErr: true,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			tArgs := tt.args(t)
-			receiver := tt.init(t)
-			err := receiver.WriteHeader(tArgs.w, tArgs.pkg, tArgs.imports)
-
-			if tt.inspect != nil {
-				tt.inspect(receiver, t)
-			}
-
-			if (err != nil) != tt.wantErr {
-				t.Fatalf("Generator.WriteHeader error = %v, wantErr: %t", err, tt.wantErr)
-			}
-
-			if tt.inspectErr != nil {
-				tt.inspectErr(err, t)
-			}
-
-		})
-	}
-}
-
-func TestGenerator_WriteTest(t *testing.T) {
-	type args struct {
 		w io.Writer
 	}
 
@@ -215,7 +161,56 @@ func TestGenerator_WriteTest(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			tArgs := tt.args(t)
 			receiver := tt.init(t)
-			err := receiver.WriteTest(tArgs.w)
+			err := receiver.WriteHeader(tArgs.w)
+
+			if tt.inspect != nil {
+				tt.inspect(receiver, t)
+			}
+
+			if (err != nil) != tt.wantErr {
+				t.Fatalf("Generator.WriteHeader error = %v, wantErr: %t", err, tt.wantErr)
+			}
+
+			if tt.inspectErr != nil {
+				tt.inspectErr(err, t)
+			}
+
+		})
+	}
+}
+
+func TestGenerator_WriteTests(t *testing.T) {
+	type args struct {
+		w io.Writer
+	}
+
+	tests := []struct {
+		name    string
+		args    func(t *testing.T) args
+		init    func(t *testing.T) *Generator
+		inspect func(r *Generator, t *testing.T) //inspects receiver after method run
+
+		wantErr    bool
+		inspectErr func(err error, t *testing.T) //use for more precise error evaluation after test
+
+	}{
+		{
+			name: "bad writer",
+			args: func(t *testing.T) args {
+				return args{
+					w: errorWriter{io.EOF},
+				}
+			},
+			init:    func(t *testing.T) *Generator { return &Generator{funcs: []*Func{&Func{}}} },
+			wantErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tArgs := tt.args(t)
+			receiver := tt.init(t)
+			err := receiver.WriteTests(tArgs.w)
 
 			if tt.inspect != nil {
 				tt.inspect(receiver, t)
@@ -229,48 +224,6 @@ func TestGenerator_WriteTest(t *testing.T) {
 				tt.inspectErr(err, t)
 			}
 
-		})
-	}
-}
-
-func TestNewGenerator(t *testing.T) {
-	type args struct {
-		fs  *token.FileSet
-		fn  *Func
-		opt Options
-	}
-
-	tests := []struct {
-		name string
-		args func(t *testing.T) args
-
-		want1 *Generator
-	}{
-		{
-			name: "success",
-			args: func(*testing.T) args {
-				return args{
-					fs:  token.NewFileSet(),
-					fn:  &Func{},
-					opt: Options{Comment: "TODO:"},
-				}
-			},
-			want1: &Generator{
-				fs:      token.NewFileSet(),
-				Func:    &Func{},
-				Comment: "TODO:",
-			},
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			tArgs := tt.args(t)
-			got1 := NewGenerator(tArgs.fs, tArgs.fn, tArgs.opt)
-
-			if !reflect.DeepEqual(got1, tt.want1) {
-				t.Errorf("NewGenerator got1 = %v, want1: %v", got1, tt.want1)
-			}
 		})
 	}
 }

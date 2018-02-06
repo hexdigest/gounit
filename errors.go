@@ -5,6 +5,7 @@ import "fmt"
 const (
 	//standard exit codes
 	ExitCodeOK             = 0
+	ExitCodeErrGeneric     = 1
 	ExitCodeErrCommandLine = 2
 )
 
@@ -21,7 +22,6 @@ var (
 	ErrFailedToOpenOutFile    = NewError(12, "failed to open output file: %v")
 	ErrFailedToCreateOutFile  = NewError(13, "failed to create output file: %v")
 	ErrInputFileDoesNotExist  = NewError(14, "input file does not exist")
-	ErrTestIsAlreadyExist     = NewError(15, "test is already exist")
 	ErrSeekFailed             = NewError(16, "failed to seek: %v")
 	ErrFixImports             = NewError(17, "failed to fix imports: %v")
 	ErrWriteTest              = NewError(18, "failed to write generated test: %v")
@@ -32,14 +32,18 @@ type Error struct {
 	format string
 }
 
-func NewError(code int, format string) Error {
-	return Error{code: code, format: format}
+func NewError(code int, format string) *Error {
+	return &Error{code: code, format: format}
 }
 
-func (e Error) Format(args ...interface{}) error {
-	return fmt.Errorf(e.format, args...)
+func (e *Error) Format(args ...interface{}) *Error {
+	return NewError(e.code, fmt.Sprintf(e.format, args...))
 }
 
-func (e Error) Code() int {
+func (e *Error) Error() string {
+	return e.format
+}
+
+func (e *Error) Code() int {
 	return e.code
 }

@@ -69,7 +69,7 @@ func TestNewError(t *testing.T) {
 		name string
 		args func(t *testing.T) args
 
-		want1 Error
+		want1 *Error
 	}{
 		{
 			name: "success",
@@ -79,7 +79,7 @@ func TestNewError(t *testing.T) {
 					format: "format",
 				}
 			},
-			want1: Error{code: 1, format: "format"},
+			want1: &Error{code: 1, format: "format"},
 		},
 	}
 
