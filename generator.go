@@ -97,8 +97,8 @@ func {{ $func.TestName }}(t *testing.T) {
 		{{- if $func.IsMethod }}
 			init func(t *testing.T) {{ $func.ReceiverType }}
 			inspect func(r {{ $func.ReceiverType }}, t *testing.T) //inspects receiver after test run
-		{{ end -}}
-		{{if (gt $func.NumParams 0) -}}
+		{{ end }}
+		{{- if (gt $func.NumParams 0) }}
 			args func(t *testing.T) args
 		{{ end }}
 		{{ range $result := $func.Results }}
@@ -125,7 +125,7 @@ func {{ $func.TestName }}(t *testing.T) {
 				receiver := tt.init(t)
 				{{ if (gt $func.NumResults 0) }}{{ join $func.ResultsNames ", " }} := {{end}}receiver.{{$func.Name}}(
 					{{- range $i, $pn := $func.ParamsNames }}
-						{{- if not (eq $i 0)}},{{end}}tArgs.{{ $pn }}{{ end }}{{if $func.IsVariadic}}...{{end}})
+						{{- if not (eq $i 0)}},{{end}}tArgs.{{ $pn }}{{ end }})
 
 				if tt.inspect != nil {
 					tt.inspect(receiver, t)
@@ -133,7 +133,7 @@ func {{ $func.TestName }}(t *testing.T) {
 			{{ else }}
 				{{ if (gt $func.NumResults 0) }}{{ join $func.ResultsNames ", " }} := {{end}}{{$func.Name}}(
 					{{- range $i, $pn := $func.ParamsNames }}
-						{{- if not (eq $i 0)}},{{end}}tArgs.{{ $pn }}{{ end }}{{if $func.IsVariadic}}...{{end}})
+						{{- if not (eq $i 0)}},{{end}}tArgs.{{ $pn }}{{ end }})
 			{{end}}
 			{{ range $result := $func.ResultsNames }}
 				{{ if (eq $result "err") }}

@@ -7,7 +7,7 @@ import (
 	"testing"
 )
 
-func Test_NewFunc(t *testing.T) {
+func TestNewFunc(t *testing.T) {
 	type args struct {
 		fs  *token.FileSet
 		sig *ast.FuncDecl
@@ -47,7 +47,7 @@ func Test_NewFunc(t *testing.T) {
 	}
 }
 
-func Test_Func_NumParams(t *testing.T) {
+func TestFunc_NumParams(t *testing.T) {
 	tests := []struct {
 		name string
 
@@ -90,7 +90,7 @@ func Test_Func_NumParams(t *testing.T) {
 	}
 }
 
-func Test_Func_NumResults(t *testing.T) {
+func TestFunc_NumResults(t *testing.T) {
 	tests := []struct {
 		name string
 
@@ -145,7 +145,7 @@ func Test_Func_NumResults(t *testing.T) {
 	}
 }
 
-func Test_Func_Params(t *testing.T) {
+func TestFunc_Params(t *testing.T) {
 	tests := []struct {
 		name string
 
@@ -218,7 +218,7 @@ func Test_Func_Params(t *testing.T) {
 	}
 }
 
-func Test_Func_Results(t *testing.T) {
+func TestFunc_Results(t *testing.T) {
 	tests := []struct {
 		name string
 
@@ -303,7 +303,7 @@ func Test_Func_Results(t *testing.T) {
 	}
 }
 
-func Test_Func_ParamsNames(t *testing.T) {
+func TestFunc_ParamsNames(t *testing.T) {
 	tests := []struct {
 		name string
 
@@ -337,7 +337,7 @@ func Test_Func_ParamsNames(t *testing.T) {
 					},
 				}
 			},
-			want1: []string{"s1", "s2", "i3"},
+			want1: []string{"s1", "s2", "i3..."},
 		},
 		{
 			name: "anonymous params",
@@ -376,7 +376,7 @@ func Test_Func_ParamsNames(t *testing.T) {
 	}
 }
 
-func Test_Func_ResultsNames(t *testing.T) {
+func TestFunc_ResultsNames(t *testing.T) {
 	tests := []struct {
 		name string
 
@@ -462,7 +462,7 @@ func Test_Func_ResultsNames(t *testing.T) {
 	}
 }
 
-func Test_Func_TestName(t *testing.T) {
+func TestFunc_TestName(t *testing.T) {
 	tests := []struct {
 		name string
 
@@ -479,6 +479,13 @@ func Test_Func_TestName(t *testing.T) {
 			want1: "Test_func",
 		},
 		{
+			name: "Func",
+			init: func(*testing.T) *Func {
+				return &Func{Signature: &ast.FuncDecl{Name: &ast.Ident{Name: "Func"}}}
+			},
+			want1: "TestFunc",
+		},
+		{
 			name: "method",
 			init: func(*testing.T) *Func {
 				return &Func{Signature: &ast.FuncDecl{
@@ -486,7 +493,17 @@ func Test_Func_TestName(t *testing.T) {
 					Recv: &ast.FieldList{List: []*ast.Field{{Type: &ast.Ident{Name: "*Receiver"}}}},
 				}}
 			},
-			want1: "Test_Receiver_method",
+			want1: "TestReceiver_method",
+		},
+		{
+			name: "Method",
+			init: func(*testing.T) *Func {
+				return &Func{Signature: &ast.FuncDecl{
+					Name: &ast.Ident{Name: "Method"},
+					Recv: &ast.FieldList{List: []*ast.Field{{Type: &ast.Ident{Name: "*Receiver"}}}},
+				}}
+			},
+			want1: "TestReceiver_Method",
 		},
 	}
 
@@ -508,7 +525,7 @@ func Test_Func_TestName(t *testing.T) {
 	}
 }
 
-func Test_Func_IsMethod(t *testing.T) {
+func TestFunc_IsMethod(t *testing.T) {
 	tests := []struct {
 		name string
 
@@ -549,7 +566,7 @@ func Test_Func_IsMethod(t *testing.T) {
 	}
 }
 
-func Test_Func_ReceiverType(t *testing.T) {
+func TestFunc_ReceiverType(t *testing.T) {
 	tests := []struct {
 		name string
 
@@ -591,7 +608,7 @@ func Test_Func_ReceiverType(t *testing.T) {
 	}
 }
 
-func Test_Func_ReturnsError(t *testing.T) {
+func TestFunc_ReturnsError(t *testing.T) {
 	tests := []struct {
 		name string
 
@@ -659,7 +676,7 @@ func Test_Func_ReturnsError(t *testing.T) {
 	}
 }
 
-func Test_Func_LastParam(t *testing.T) {
+func TestFunc_LastParam(t *testing.T) {
 	tests := []struct {
 		name string
 
@@ -716,7 +733,7 @@ func Test_Func_LastParam(t *testing.T) {
 	}
 }
 
-func Test_Func_LastResult(t *testing.T) {
+func TestFunc_LastResult(t *testing.T) {
 	tests := []struct {
 		name string
 
@@ -769,7 +786,7 @@ func Test_Func_LastResult(t *testing.T) {
 	}
 }
 
-func Test_Func_IsVariadic(t *testing.T) {
+func TestFunc_IsVariadic(t *testing.T) {
 	tests := []struct {
 		name string
 
@@ -841,7 +858,7 @@ func Test_Func_IsVariadic(t *testing.T) {
 	}
 }
 
-func Test_Func_Name(t *testing.T) {
+func TestFunc_Name(t *testing.T) {
 	tests := []struct {
 		name string
 

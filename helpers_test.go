@@ -9,7 +9,7 @@ import (
 	"testing"
 )
 
-func Test_IsTestExist(t *testing.T) {
+func TestIsTestExist(t *testing.T) {
 	type args struct {
 		fs  *token.FileSet
 		r   io.Reader
@@ -35,11 +35,6 @@ func Test_IsTestExist(t *testing.T) {
 				}
 			},
 			wantErr: true,
-			inspectErr: func(err error, t *testing.T) {
-				if !strings.HasPrefix(err.Error(), "failed to parse file:") {
-					t.Errorf("unexpected error: %v", err)
-				}
-			},
 		},
 		{
 			name: "test does not exist",
@@ -87,7 +82,7 @@ func Test_IsTestExist(t *testing.T) {
 	}
 }
 
-func Test_FindSourceFunc(t *testing.T) {
+func TestFindSourceFunc(t *testing.T) {
 	type args struct {
 		fs   *token.FileSet
 		file *ast.File
@@ -98,7 +93,7 @@ func Test_FindSourceFunc(t *testing.T) {
 		name string
 		args func(t *testing.T) args
 
-		want1      *Func
+		want1      *ast.FuncDecl
 		wantErr    bool
 		inspectErr func(err error, t *testing.T) //use for more precise error evaluation after test
 
@@ -112,7 +107,7 @@ func Test_FindSourceFunc(t *testing.T) {
 			},
 			wantErr: true,
 			inspectErr: func(err error, t *testing.T) {
-				if err.Error() != "input file doesn't contain package name" {
+				if err.Error() != "input file does not contain package name" {
 					t.Errorf("unexpected error: %v", err)
 				}
 			},
@@ -147,12 +142,7 @@ func Test_FindSourceFunc(t *testing.T) {
 					fs:   fs,
 				}
 			},
-			wantErr: true,
-			inspectErr: func(err error, t *testing.T) {
-				if err.Error() != "unable to find a function declaration on the given line" {
-					t.Errorf("unexpected error: %v", err)
-				}
-			},
+			wantErr: false,
 		},
 	}
 

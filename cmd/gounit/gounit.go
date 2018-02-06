@@ -12,13 +12,6 @@ import (
 	"golang.org/x/tools/imports"
 )
 
-const (
-	//application exit codes
-	ecInputErr           = 3 //something's wrong with the input
-	ecOutputErr          = 4 //generation/write error
-	ecTestIsAlreadyExist = 5
-)
-
 func main() {
 	options := gounit.GetOptions(os.Args[1:], os.Stdout, os.Stderr, os.Exit)
 
@@ -34,11 +27,11 @@ func main() {
 	r, err = os.Open(options.InputFile)
 	if err != nil {
 		if !os.IsNotExist(err) {
-			exit(ecInputErr, "failed to open input file: %v", err)
+			exit(gounit.ErrFailedToOpenInFile, err)
 		}
 
 		if !options.UseStdin {
-			exit(ecInputErr, "input file does not exist")
+			exit(gounit.ErrInputFileDoesNotExist)
 		}
 
 		r = os.Stdin
@@ -46,23 +39,29 @@ func main() {
 
 	file, err := parser.ParseFile(fs, options.InputFile, r, 0)
 	if err != nil {
-		exit(ecInputErr, "failed to parse file: %v", err)
+		exit(gounit.ErrFailedToParseInFile, err)
 	}
 
-	foundFunc, err := gounit.FindSourceFunc(fs, file, options)
+	funcDecl, err := gounit.FindSourceFunc(fs, file, options)
 	if err != nil {
-		exit(ecInputErr, "%v", err)
+		exit(gounit.ErrFailedToFindSourceFunc, err)
 	}
+
+	if funcDecl == nil {
+		exit(gounit.ErrFuncNotFound)
+	}
+
+	foundFunc := gounit.NewFunc(fs, funcDecl)
 
 	outFile, err := os.OpenFile(options.OutputFile, os.O_RDWR, 0600)
 	if err != nil {
 		if !os.IsNotExist(err) {
-			exit(ecOutputErr, "failed to open output file: %v", err)
+			exit(gounit.ErrFailedToOpenOutFile, err)
 		}
 
 		if !options.UseStdout {
 			if outFile, err = os.OpenFile(options.OutputFile, os.O_CREATE|os.O_WRONLY, 0600); err != nil {
-				exit(ecOutputErr, "failed to create output file: %v", err)
+				exit(gounit.ErrFailedToCreateOutFile, err)
 			}
 		}
 	} else {
@@ -73,15 +72,15 @@ func main() {
 
 		isExist, err := gounit.IsTestExist(fs, tr, foundFunc, options)
 		if err != nil {
-			exit(ecOutputErr, "failed to check if test is already present: %v", err)
+			exit(gounit.ErrFailedToParseOutFile, err)
 		}
 
 		if isExist {
-			exit(ecTestIsAlreadyExist, "test is already exist")
+			exit(gounit.ErrTestIsAlreadyExist)
 		}
 
 		if _, err := outFile.Seek(0, 0); err != nil {
-			exit(ecOutputErr, "failed to seek: %v", err)
+			exit(gounit.ErrSeekFailed, err)
 		}
 	}
 	w = outFile
@@ -95,25 +94,26 @@ func main() {
 
 	if !append {
 		if err := generator.WriteHeader(buf, file.Name.String(), file.Imports); err != nil {
-			exit(ecOutputErr, "failed to write header: %v", err)
+			exit(gounit.ErrGenerateHeader, err)
 		}
 	}
 
 	if err := generator.WriteTest(buf); err != nil {
-		exit(ecOutputErr, "failed to generate code: %v", err)
+		exit(gounit.ErrGenerateTest, err)
 	}
 
 	formattedSource, err := imports.Process(options.OutputFile, buf.Bytes(), nil)
 	if err != nil {
-		exit(ecOutputErr, "failed to fix imports %s\n: %v", string(buf.Bytes()), err)
+		fmt.Println(string(buf.Bytes()))
+		exit(gounit.ErrFixImports, err)
 	}
 
 	if _, err = w.Write(formattedSource); err != nil {
-		exit(ecOutputErr, "failed to write generated test: %v", err)
+		exit(gounit.ErrWriteTest, err)
 	}
 }
 
-func exit(exitCode int, format string, args ...interface{}) {
-	fmt.Fprintf(os.Stderr, format+"\n", args...)
-	os.Exit(exitCode)
+func exit(e gounit.Error, args ...interface{}) {
+	fmt.Fprintf(os.Stderr, "%v\n", e.Format(args...))
+	os.Exit(e.Code())
 }

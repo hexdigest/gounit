@@ -6,7 +6,7 @@ import (
 	"testing"
 )
 
-func Test_NewVisitor(t *testing.T) {
+func TestNewVisitor(t *testing.T) {
 	type args struct {
 		match matchFunc
 	}
@@ -37,7 +37,7 @@ func Test_NewVisitor(t *testing.T) {
 	}
 }
 
-func Test_Visitor_Visit(t *testing.T) {
+func TestVisitor_Visit(t *testing.T) {
 	type args struct {
 		node ast.Node
 	}

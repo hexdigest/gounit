@@ -40,7 +40,7 @@ func GetOptions(arguments []string, stdout, stderr io.Writer, exit exitFunc) Opt
 	if *showHelp {
 		flagset.SetOutput(stdout)
 		flagset.Usage()
-		exit(0)
+		exit(ExitCodeOK)
 	}
 
 	var errors []string
@@ -67,7 +67,7 @@ func GetOptions(arguments []string, stdout, stderr io.Writer, exit exitFunc) Opt
 			fmt.Fprintf(stderr, "%s\n", e)
 		}
 		flagset.Usage()
-		exit(2)
+		exit(ExitCodeErrCommandLine)
 	}
 
 	return Options{

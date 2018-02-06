@@ -93,9 +93,9 @@ func (f *Func) ParamsNames() []string {
 
 	names := []string{}
 	for i, p := range f.Signature.Type.Params.List {
-		for _, n := range p.Names {
+		for k, n := range p.Names {
 			name := n.Name
-			if i == f.NumParams()-1 && f.IsVariadic() {
+			if i == len(f.Signature.Type.Params.List)-1 && k == len(p.Names)-1 && f.IsVariadic() {
 				name += "..."
 			}
 			names = append(names, name)
@@ -142,9 +142,11 @@ func (f *Func) Name() string {
 
 //TestName returns a name of the test
 func (f *Func) TestName() string {
-	name := "Test_"
+	name := "Test"
 	if f.IsMethod() {
-		name += strings.Replace(f.ReceiverType(), "*", "", -1) + "_"
+		name += strings.Replace(f.ReceiverType(), "*", "", 1) + "_"
+	} else if !f.Signature.Name.IsExported() {
+		name += "_"
 	}
 
 	return name + f.Signature.Name.String()

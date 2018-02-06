@@ -45,7 +45,7 @@ func (ew errorWriter) Write([]byte) (int, error) {
 	return 0, ew.err
 }
 
-func Test_Generator_processTemplate(t *testing.T) {
+func TestGenerator_processTemplate(t *testing.T) {
 	type args struct {
 		w        io.Writer
 		tmplName string
@@ -133,7 +133,7 @@ func Test_Generator_processTemplate(t *testing.T) {
 	}
 }
 
-func Test_Generator_WriteHeader(t *testing.T) {
+func TestGenerator_WriteHeader(t *testing.T) {
 	type args struct {
 		w       io.Writer
 		pkg     string
@@ -184,7 +184,7 @@ func Test_Generator_WriteHeader(t *testing.T) {
 	}
 }
 
-func Test_Generator_WriteTest(t *testing.T) {
+func TestGenerator_WriteTest(t *testing.T) {
 	type args struct {
 		w io.Writer
 	}
@@ -233,7 +233,7 @@ func Test_Generator_WriteTest(t *testing.T) {
 	}
 }
 
-func Test_NewGenerator(t *testing.T) {
+func TestNewGenerator(t *testing.T) {
 	type args struct {
 		fs  *token.FileSet
 		fn  *Func

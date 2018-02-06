@@ -17,7 +17,7 @@ func expectExitCode(t *testing.T, expectedCode int) exitFunc {
 	}
 }
 
-func Test_GetOptions(t *testing.T) {
+func TestGetOptions(t *testing.T) {
 	type args struct {
 		arguments []string
 		stdout    io.Writer

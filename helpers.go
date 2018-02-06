@@ -13,9 +13,9 @@ import (
 
 //FindSourceFunc returns *Func struct for the function declaration on
 //line opt.LineNumber
-func FindSourceFunc(fs *token.FileSet, file *ast.File, opt Options) (*Func, error) {
+func FindSourceFunc(fs *token.FileSet, file *ast.File, opt Options) (*ast.FuncDecl, error) {
 	if file.Name == nil {
-		return nil, errors.New("input file doesn't contain package name")
+		return nil, errors.New("input file does not contain package name")
 	}
 
 	if fs.File(token.Pos(1)).LineCount() < opt.LineNumber {
@@ -28,12 +28,7 @@ func FindSourceFunc(fs *token.FileSet, file *ast.File, opt Options) (*Func, erro
 
 	ast.Walk(visitor, file)
 
-	foundFunc := visitor.Func()
-	if foundFunc == nil {
-		return nil, errors.New("unable to find a function declaration on the given line")
-	}
-
-	return NewFunc(fs, foundFunc), nil
+	return visitor.Func(), nil
 }
 
 //IsTestExist checks if the test for function fn
@@ -41,7 +36,7 @@ func FindSourceFunc(fs *token.FileSet, file *ast.File, opt Options) (*Func, erro
 func IsTestExist(fs *token.FileSet, r io.Reader, fn *Func, opt Options) (bool, error) {
 	file, err := parser.ParseFile(fs, opt.InputFile, r, 0)
 	if err != nil {
-		return false, fmt.Errorf("failed to parse file: %v", err)
+		return false, err
 	}
 
 	visitor := NewVisitor(func(fd *ast.FuncDecl) bool {
