@@ -1,6 +1,7 @@
 package gounit
 
 import (
+	"bytes"
 	"fmt"
 	"go/ast"
 	"go/parser"
@@ -8,30 +9,30 @@ import (
 	"io"
 	"strings"
 	"text/template"
+
+	"golang.org/x/tools/imports"
 )
 
 //Generator is used to generate a test stub for function Func
 type Generator struct {
-	comment string
 	fs      *token.FileSet
 	funcs   []*Func
 	imports []*ast.ImportSpec
 	pkg     string
+	opt     Options
+	buf     *bytes.Buffer
 }
 
 //NewGenerator returns a pointer to Generator
-func NewGenerator(fs *token.FileSet, opt Options, src, testSrc io.Reader) (*Generator, error) {
+func NewGenerator(opt Options, src, testSrc io.Reader) (*Generator, error) {
+	fs := token.NewFileSet()
 	file, err := parser.ParseFile(fs, opt.InputFile, src, 0)
 	if err != nil {
 		return nil, ErrFailedToParseInFile.Format(err)
 	}
 
-	if file.Name == nil {
-		return nil, ErrFailedToParseInFile.Format("input file does not contain package name")
-	}
-
 	visitor := NewVisitor(func(fd *ast.FuncDecl) bool {
-		return fs.Position(fd.Pos()).Line == opt.LineNumber || fd.Name.Name == opt.Function
+		return opt.Lines.Include(fs.Position(fd.Pos()).Line) || opt.Functions.Include(fd.Name.Name)
 	})
 
 	ast.Walk(visitor, file)
@@ -42,8 +43,12 @@ func NewGenerator(fs *token.FileSet, opt Options, src, testSrc io.Reader) (*Gene
 		return nil, ErrFuncNotFound
 	}
 
+	var buf = bytes.NewBuffer([]byte{})
+
 	if testSrc != nil {
-		file, err := parser.ParseFile(fs, opt.OutputFile, testSrc, 0)
+		tr := io.TeeReader(testSrc, buf)
+
+		file, err := parser.ParseFile(fs, opt.OutputFile, tr, 0)
 		if err != nil {
 			return nil, ErrFailedToParseOutFile.Format(err)
 		}
@@ -52,12 +57,36 @@ func NewGenerator(fs *token.FileSet, opt Options, src, testSrc io.Reader) (*Gene
 	}
 
 	return &Generator{
-		comment: opt.Comment,
+		buf:     buf,
+		opt:     opt,
 		fs:      fs,
 		funcs:   funcs,
 		imports: file.Imports,
 		pkg:     file.Name.String(),
 	}, nil
+}
+
+func (g *Generator) Write(w io.Writer) error {
+	if g.buf.Len() == 0 {
+		if err := g.WriteHeader(g.buf); err != nil {
+			return ErrGenerateHeader.Format(err)
+		}
+	}
+
+	if err := g.WriteTests(g.buf); err != nil {
+		return ErrGenerateTest.Format(err)
+	}
+
+	formattedSource, err := imports.Process(g.opt.OutputFile, g.buf.Bytes(), nil)
+	if err != nil {
+		return ErrFixImports.Format(err)
+	}
+
+	if _, err = w.Write(formattedSource); err != nil {
+		return ErrWriteTest.Format(err)
+	}
+
+	return nil
 }
 
 //WriteHeader writes a package name and imports specs to w
@@ -105,7 +134,7 @@ func (g *Generator) WriteTests(w io.Writer) error {
 			Comment string
 		}{
 			Func:    f,
-			Comment: g.comment,
+			Comment: g.opt.Comment,
 		})
 
 		if err != nil {
@@ -144,6 +173,7 @@ import(
 )`
 
 var testTemplate = `{{$func := .Func}}
+
 func {{ $func.TestName }}(t *testing.T) {
 	{{- if (gt $func.NumParams 0) }}
 		type args struct {

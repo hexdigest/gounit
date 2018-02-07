@@ -75,8 +75,8 @@ func TestVisitor_Visit(t *testing.T) {
 				}
 			},
 			inspect: func(v *Visitor, t *testing.T) {
-				if v.found == nil {
-					t.Errorf("expected non-nil v.found")
+				if len(v.found) == 0 {
+					t.Errorf("expected non-empty v.found")
 				}
 			},
 			want1: foundVisitor,
@@ -96,7 +96,39 @@ func TestVisitor_Visit(t *testing.T) {
 			if !reflect.DeepEqual(got1, tt.want1) {
 				t.Errorf("Visitor.Visit got1 = %v, want1: %v", got1, tt.want1)
 			}
+		})
+	}
+}
 
+func TestVisitor_Funcs(t *testing.T) {
+	tests := []struct {
+		name    string
+		init    func(t *testing.T) *Visitor
+		inspect func(r *Visitor, t *testing.T) //inspects receiver after test run
+
+		want1 []*Func
+	}{
+		{
+			name: "success",
+			init: func(t *testing.T) *Visitor {
+				return &Visitor{found: []*Func{{}}}
+			},
+			want1: []*Func{{}},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			receiver := tt.init(t)
+			got1 := receiver.Funcs()
+
+			if tt.inspect != nil {
+				tt.inspect(receiver, t)
+			}
+
+			if !reflect.DeepEqual(got1, tt.want1) {
+				t.Errorf("Visitor.Funcs got1 = %v, want1: %v", got1, tt.want1)
+			}
 		})
 	}
 }

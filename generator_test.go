@@ -227,3 +227,124 @@ func TestGenerator_WriteTests(t *testing.T) {
 		})
 	}
 }
+
+func TestNewGenerator(t *testing.T) {
+	type args struct {
+		opt     Options
+		src     io.Reader
+		testSrc io.Reader
+	}
+	tests := []struct {
+		name string
+		args func(t *testing.T) args
+
+		wantErr    bool
+		inspectErr func(err error, t *testing.T) //use for more precise error evaluation after test
+	}{
+		{
+			name: "failed to parse input file",
+			args: func(*testing.T) args {
+				return args{
+					src: strings.NewReader(``),
+				}
+			},
+			wantErr: true,
+			inspectErr: func(err error, t *testing.T) {
+				gErr, ok := err.(*Error)
+				if !ok {
+					t.Fatalf("unexpected error: %v", err)
+				}
+
+				if gErr.Code() != ErrFailedToParseInFile.Code() {
+					t.Errorf("unexpected error: %v", err)
+				}
+			},
+		},
+		{
+			name: "no funcs found",
+			args: func(*testing.T) args {
+				return args{
+					src: strings.NewReader(`package nofuncs`),
+				}
+			},
+			wantErr: true,
+			inspectErr: func(err error, t *testing.T) {
+				if err != ErrFuncNotFound {
+					t.Errorf("unexpected error: %v", err)
+				}
+			},
+		},
+		{
+			name: "funcs found and no destination source",
+			args: func(*testing.T) args {
+				return args{
+					opt: Options{
+						Functions: FunctionsList{"function"},
+					},
+					src: strings.NewReader(`package nofuncs
+					 func function() int {
+					 	 return 0
+					 }`),
+				}
+			},
+		},
+		{
+			name: "funcs found and destination source is broken",
+			args: func(*testing.T) args {
+				return args{
+					opt: Options{
+						Functions: FunctionsList{"function"},
+					},
+					src: strings.NewReader(`package nofuncs
+					 func function() int {
+					 	 return 0
+					 }`),
+					testSrc: strings.NewReader(``),
+				}
+			},
+			wantErr: true,
+			inspectErr: func(err error, t *testing.T) {
+				gErr, ok := err.(*Error)
+				if !ok {
+					t.Fatalf("unexpected error: %v", err)
+				}
+
+				if gErr.Code() != ErrFailedToParseOutFile.Code() {
+					t.Errorf("unexpected error: %v", err)
+				}
+			},
+		},
+		{
+			name: "funcs found and destination source is fine",
+			args: func(*testing.T) args {
+				return args{
+					opt: Options{
+						Functions: FunctionsList{"function"},
+					},
+					src: strings.NewReader(`package nofuncs
+					 func function() int {
+					 	 return 0
+					 }`),
+					testSrc: strings.NewReader(`package nofuncs`),
+				}
+			},
+			wantErr: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tArgs := tt.args(t)
+
+			_, err := NewGenerator(tArgs.opt, tArgs.src, tArgs.testSrc)
+
+			if (err != nil) != tt.wantErr {
+				t.Fatalf("NewGenerator error = %v, wantErr: %t", err, tt.wantErr)
+			}
+
+			if tt.inspectErr != nil {
+				tt.inspectErr(err, t)
+			}
+		})
+	}
+}

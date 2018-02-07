@@ -46,7 +46,7 @@ func TestGetOptions(t *testing.T) {
 			name: "missing line number",
 			args: func(t *testing.T) args {
 				return args{
-					stderr: newExpectPrefixWriter(t, "missing line number or function name"),
+					stderr: newExpectPrefixWriter(t, "missing line numbers or function names"),
 					stdout: ioutil.Discard,
 					exit:   expectExitCode(t, 2),
 				}
@@ -64,6 +64,16 @@ func TestGetOptions(t *testing.T) {
 			},
 		},
 		{
+			name: "cli",
+			args: func(t *testing.T) args {
+				return args{
+					stdout:    ioutil.Discard,
+					arguments: []string{"-cli"},
+				}
+			},
+			want1: Options{UseCLI: true},
+		},
+		{
 			name: "success",
 			args: func(t *testing.T) args {
 				return args{
@@ -72,7 +82,7 @@ func TestGetOptions(t *testing.T) {
 				}
 			},
 			want1: Options{
-				LineNumber: 10,
+				Lines:      LinesNumbers{10},
 				InputFile:  "input.go",
 				OutputFile: "input_test.go",
 				Comment:    "TODO",
@@ -89,6 +99,293 @@ func TestGetOptions(t *testing.T) {
 				t.Errorf("GetOptions got1 = %v, want1: %v", got1, tt.want1)
 			}
 
+		})
+	}
+}
+
+func TestLinesNumbers_Set(t *testing.T) {
+	type args struct {
+		value string
+	}
+	tests := []struct {
+		name    string
+		init    func(t *testing.T) *LinesNumbers
+		inspect func(r *LinesNumbers, t *testing.T) //inspects receiver after test run
+
+		args func(t *testing.T) args
+
+		wantErr    bool
+		inspectErr func(err error, t *testing.T) //use for more precise error evaluation after test
+	}{
+		{
+			name: "invalid values",
+			init: func(*testing.T) *LinesNumbers {
+				return &LinesNumbers{}
+			},
+			args: func(*testing.T) args {
+				return args{value: "a,b"}
+			},
+			wantErr: true,
+		},
+		{
+			name: "valid values",
+			init: func(*testing.T) *LinesNumbers {
+				return &LinesNumbers{}
+			},
+			args: func(*testing.T) args {
+				return args{value: "1,2"}
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tArgs := tt.args(t)
+
+			receiver := tt.init(t)
+			err := receiver.Set(tArgs.value)
+
+			if tt.inspect != nil {
+				tt.inspect(receiver, t)
+			}
+
+			if (err != nil) != tt.wantErr {
+				t.Fatalf("LinesNumbers.Set error = %v, wantErr: %t", err, tt.wantErr)
+			}
+
+			if tt.inspectErr != nil {
+				tt.inspectErr(err, t)
+			}
+		})
+	}
+}
+
+func TestLinesNumbers_String(t *testing.T) {
+	tests := []struct {
+		name    string
+		init    func(t *testing.T) *LinesNumbers
+		inspect func(r *LinesNumbers, t *testing.T) //inspects receiver after test run
+
+		want1 string
+	}{
+		{
+			name: "ok",
+			init: func(t *testing.T) *LinesNumbers {
+				return &LinesNumbers{1, 2}
+			},
+			want1: "[1 2]",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			receiver := tt.init(t)
+			got1 := receiver.String()
+
+			if tt.inspect != nil {
+				tt.inspect(receiver, t)
+			}
+
+			if !reflect.DeepEqual(got1, tt.want1) {
+				t.Errorf("LinesNumbers.String got1 = %v, want1: %v", got1, tt.want1)
+			}
+		})
+	}
+}
+
+func TestLinesNumbers_Include(t *testing.T) {
+	type args struct {
+		line int
+	}
+	tests := []struct {
+		name    string
+		init    func(t *testing.T) LinesNumbers
+		inspect func(r LinesNumbers, t *testing.T) //inspects receiver after test run
+
+		args func(t *testing.T) args
+
+		want1 bool
+	}{
+		{
+			name: "true",
+			init: func(t *testing.T) LinesNumbers {
+				return LinesNumbers{1, 2, 3}
+			},
+			args: func(*testing.T) args {
+				return args{line: 2}
+			},
+			want1: true,
+		},
+		{
+			name: "false",
+			init: func(t *testing.T) LinesNumbers {
+				return LinesNumbers{1, 2, 3}
+			},
+			args: func(*testing.T) args {
+				return args{line: 7}
+			},
+			want1: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tArgs := tt.args(t)
+
+			receiver := tt.init(t)
+			got1 := receiver.Include(tArgs.line)
+
+			if tt.inspect != nil {
+				tt.inspect(receiver, t)
+			}
+
+			if !reflect.DeepEqual(got1, tt.want1) {
+				t.Errorf("LinesNumbers.Include got1 = %v, want1: %v", got1, tt.want1)
+			}
+		})
+	}
+}
+
+func TestFunctionsList_Set(t *testing.T) {
+	type args struct {
+		value string
+	}
+	tests := []struct {
+		name    string
+		init    func(t *testing.T) *FunctionsList
+		inspect func(r *FunctionsList, t *testing.T) //inspects receiver after test run
+
+		args func(t *testing.T) args
+
+		wantErr    bool
+		inspectErr func(err error, t *testing.T) //use for more precise error evaluation after test
+	}{
+		{
+			name: "invalid values",
+			init: func(t *testing.T) *FunctionsList {
+				return &FunctionsList{}
+			},
+			args: func(t *testing.T) args {
+				return args{value: "!!!"}
+			},
+			wantErr: true,
+		},
+		{
+			name: "valid values",
+			init: func(t *testing.T) *FunctionsList {
+				return &FunctionsList{}
+			},
+			args: func(t *testing.T) args {
+				return args{value: "func1,func2"}
+			},
+			wantErr: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tArgs := tt.args(t)
+
+			receiver := tt.init(t)
+			err := receiver.Set(tArgs.value)
+
+			if tt.inspect != nil {
+				tt.inspect(receiver, t)
+			}
+
+			if (err != nil) != tt.wantErr {
+				t.Fatalf("FunctionsList.Set error = %v, wantErr: %t", err, tt.wantErr)
+			}
+
+			if tt.inspectErr != nil {
+				tt.inspectErr(err, t)
+			}
+		})
+	}
+}
+
+func TestFunctionsList_String(t *testing.T) {
+	tests := []struct {
+		name    string
+		init    func(t *testing.T) *FunctionsList
+		inspect func(r *FunctionsList, t *testing.T) //inspects receiver after test run
+
+		want1 string
+	}{
+		{
+			name: "ok",
+			init: func(t *testing.T) *FunctionsList {
+				return &FunctionsList{"func1", "func2"}
+			},
+			want1: "[func1 func2]",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			receiver := tt.init(t)
+			got1 := receiver.String()
+
+			if tt.inspect != nil {
+				tt.inspect(receiver, t)
+			}
+
+			if !reflect.DeepEqual(got1, tt.want1) {
+				t.Errorf("FunctionsList.String got1 = %v, want1: %v", got1, tt.want1)
+			}
+		})
+	}
+}
+
+func TestFunctionsList_Include(t *testing.T) {
+	type args struct {
+		function string
+	}
+	tests := []struct {
+		name    string
+		init    func(t *testing.T) FunctionsList
+		inspect func(r FunctionsList, t *testing.T) //inspects receiver after test run
+
+		args func(t *testing.T) args
+
+		want1 bool
+	}{
+		{
+			name: "true",
+			init: func(t *testing.T) FunctionsList {
+				return FunctionsList{"func1", "func2", "func3"}
+			},
+			args: func(*testing.T) args {
+				return args{function: "func2"}
+			},
+			want1: true,
+		},
+		{
+			name: "false",
+			init: func(t *testing.T) FunctionsList {
+				return FunctionsList{"func1", "func2", "func3"}
+			},
+			args: func(*testing.T) args {
+				return args{function: "func5"}
+			},
+			want1: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tArgs := tt.args(t)
+
+			receiver := tt.init(t)
+			got1 := receiver.Include(tArgs.function)
+
+			if tt.inspect != nil {
+				tt.inspect(receiver, t)
+			}
+
+			if !reflect.DeepEqual(got1, tt.want1) {
+				t.Errorf("FunctionsList.Include got1 = %v, want1: %v", got1, tt.want1)
+			}
 		})
 	}
 }

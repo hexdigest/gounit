@@ -3,23 +3,27 @@ package main
 import (
 	"bytes"
 	"fmt"
-	"go/token"
 	"io"
 	"os"
 
 	"github.com/hexdigest/gounit"
-	"golang.org/x/tools/imports"
 )
+
+type exitFunc func(int)
 
 func main() {
 	options := gounit.GetOptions(os.Args[1:], os.Stdout, os.Stderr, os.Exit)
+	if options.UseCLI {
+		if err := interactive(os.Stdin, os.Stdout); err != nil {
+			exit(err)
+		}
+		return
+	}
 
 	var (
 		r, testSrc io.Reader
 		w          io.Writer
 		err        error
-		append     bool
-		fs         = token.NewFileSet()
 		buf        = bytes.NewBuffer([]byte{})
 	)
 
@@ -48,8 +52,7 @@ func main() {
 			}
 		}
 	} else {
-		testSrc = io.TeeReader(outFile, buf)
-		append = true
+		testSrc = outFile
 	}
 
 	defer outFile.Close()
@@ -59,35 +62,83 @@ func main() {
 		w = os.Stdout
 	}
 
-	generator, err := gounit.NewGenerator(fs, options, r, testSrc)
+	generator, err := gounit.NewGenerator(options, r, testSrc)
 	if err != nil {
 		exit(err)
 	}
 
-	//rewind output file back
+	//rewind output file back to write from the beginning without
+	//re-opening the file
 	if seeker, ok := w.(io.Seeker); ok {
 		if _, err := seeker.Seek(0, 0); err != nil {
 			exit(gounit.ErrSeekFailed.Format(err))
 		}
 	}
 
-	if !append {
-		if err := generator.WriteHeader(buf); err != nil {
-			exit(gounit.ErrGenerateHeader.Format(err))
-		}
+	if err := generator.Write(buf); err != nil {
+		exit(err)
 	}
 
-	if err := generator.WriteTests(buf); err != nil {
-		exit(gounit.ErrGenerateTest.Format(err))
-	}
-
-	formattedSource, err := imports.Process(options.OutputFile, buf.Bytes(), nil)
-	if err != nil {
-		exit(gounit.ErrFixImports.Format(err))
-	}
-
-	if _, err = w.Write(formattedSource); err != nil {
+	if _, err = w.Write(buf.Bytes()); err != nil {
 		exit(gounit.ErrWriteTest.Format(err))
+	}
+}
+
+func interactive(r io.Reader, w io.Writer) error {
+	cli := gounit.NewCLI(r, w)
+	for {
+		var (
+			opt   gounit.Options
+			lines string
+			eof   string
+		)
+
+		if err := cli.Read("input file name", &opt.InputFile); err != nil {
+			return err
+		}
+		if err := cli.Read("output file name", &opt.OutputFile); err != nil {
+			return err
+		}
+		if err := cli.Read("lines numbers with functions declarations", &lines); err != nil {
+			return err
+		}
+		if err := opt.Lines.Set(lines); err != nil {
+			return err
+		}
+		if err := cli.Read("TODO comment:", &opt.Comment); err != nil {
+			return err
+		}
+
+		if err := cli.Read("EOF sequence", &eof); err != nil {
+			return err
+		}
+
+		inBytes, err := cli.ReadUntil("input file contents", eof)
+		if err != nil {
+			return gounit.ErrFailedToOpenInFile.Format(err)
+		}
+
+		outBytes, err := cli.ReadUntil("output file contents", eof)
+		if err != nil {
+			return gounit.ErrFailedToOpenOutFile.Format(err)
+		}
+
+		inputFile := bytes.NewBuffer(inBytes)
+
+		var outputFile io.Reader
+		if len(outBytes) != 0 {
+			outputFile = bytes.NewBuffer(outBytes)
+		}
+
+		generator, err := gounit.NewGenerator(opt, inputFile, outputFile)
+		if err != nil {
+			exit(err)
+		}
+
+		generator.Write(w)
+		if _, err := w.Write([]byte(eof)); err != nil {
+			exit(gounit.ErrWriteTest.Format(err))
+		}
 	}
 }
 
