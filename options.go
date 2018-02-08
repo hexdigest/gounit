@@ -99,12 +99,12 @@ func GetOptions(arguments []string, stdout, stderr io.Writer, exit exitFunc) Opt
 		cli        = flagset.Bool("cli", false, "interactive mode")
 		useStdin   = flagset.Bool("stdin", false, "use stdin rather than reading the input file")
 		useStdout  = flagset.Bool("stdout", false, "use stdout rather than writing to the output file")
-		inputFile  = flagset.String("i", "", "input file")
-		outputFile = flagset.String("o", "", "output file (optional)")
+		inputFile  = flagset.String("i", "", "input file name")
+		outputFile = flagset.String("o", "", "output file name (optional)")
 		comment    = flagset.String("c", "", "comment that will be inserted into the generated test")
 	)
-	flagset.Var(&lines, "l", "comma-separated line numbers (starting with 1) to look for the functions' declarations")
-	flagset.Var(&functions, "f", "comma-separated functions' names to generate tests for")
+	flagset.Var(&lines, "l", "comma-separated line numbers (starting with 1) to look for the function declarations")
+	flagset.Var(&functions, "f", "comma-separated function names to generate tests for")
 	flagset.Parse(arguments)
 
 	if *showHelp {
