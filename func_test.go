@@ -787,6 +787,18 @@ func TestFunc_LastResult(t *testing.T) {
 			},
 		},
 		{
+			name: "empty results",
+			init: func(*testing.T) *Func {
+				return &Func{
+					Signature: &ast.FuncDecl{
+						Type: &ast.FuncType{Results: &ast.FieldList{
+							List: []*ast.Field{},
+						}},
+					},
+				}
+			},
+		},
+		{
 			name: "has results",
 			init: func(*testing.T) *Func {
 				return &Func{

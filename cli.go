@@ -23,7 +23,7 @@ func (c *CLI) Read(prompt string, dest interface{}) error {
 }
 
 func (c *CLI) ReadUntil(prompt, until string) ([]byte, error) {
-	fmt.Fprintf(c.w, "%s follwed by %s:\n", prompt, until)
+	fmt.Fprintf(c.w, "%s followed by %s:\n", prompt, until)
 	scanner := bufio.NewScanner(c.r)
 	scanner.Split(splitByDelimiter(until))
 	scanner.Scan()

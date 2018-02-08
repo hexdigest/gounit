@@ -7,7 +7,6 @@ import (
 	"go/parser"
 	"go/token"
 	"io"
-	"strings"
 	"text/template"
 
 	"golang.org/x/tools/imports"
@@ -15,12 +14,14 @@ import (
 
 //Generator is used to generate a test stub for function Func
 type Generator struct {
-	fs      *token.FileSet
-	funcs   []*Func
-	imports []*ast.ImportSpec
-	pkg     string
-	opt     Options
-	buf     *bytes.Buffer
+	fs             *token.FileSet
+	funcs          []*Func
+	imports        []*ast.ImportSpec
+	pkg            string
+	opt            Options
+	buf            *bytes.Buffer
+	headerTemplate *template.Template
+	testTemplate   *template.Template
 }
 
 //NewGenerator returns a pointer to Generator
@@ -57,12 +58,14 @@ func NewGenerator(opt Options, src, testSrc io.Reader) (*Generator, error) {
 	}
 
 	return &Generator{
-		buf:     buf,
-		opt:     opt,
-		fs:      fs,
-		funcs:   funcs,
-		imports: file.Imports,
-		pkg:     file.Name.String(),
+		buf:            buf,
+		opt:            opt,
+		fs:             fs,
+		funcs:          funcs,
+		imports:        file.Imports,
+		pkg:            file.Name.String(),
+		headerTemplate: template.Must(template.New("header").Funcs(templateHelpers(fs)).Parse(headerTemplate)),
+		testTemplate:   template.Must(template.New("test").Funcs(templateHelpers(fs)).Parse(testTemplate)),
 	}, nil
 }
 
@@ -89,14 +92,9 @@ func (g *Generator) Write(w io.Writer) error {
 	return nil
 }
 
-//WriteHeader writes a package name and imports specs to w
+//WriteHeader writes a package name and import specs
 func (g *Generator) WriteHeader(w io.Writer) error {
-	funcs := template.FuncMap{
-		"ast": func(n ast.Node) string {
-			return nodeToString(g.fs, n)
-		},
-	}
-	return g.processTemplate(w, "header", headerTemplate, funcs, struct {
+	return g.headerTemplate.Execute(w, struct {
 		Imports []*ast.ImportSpec
 		Package string
 	}{
@@ -105,31 +103,10 @@ func (g *Generator) WriteHeader(w io.Writer) error {
 	})
 }
 
-//WriteTest writes a test stub to the w
+//WriteTests writes test stubs for every function that don't have test yet
 func (g *Generator) WriteTests(w io.Writer) error {
-	helpers := template.FuncMap{
-		"join": strings.Join,
-		"ast": func(n ast.Node) string {
-			return nodeToString(g.fs, n)
-		},
-		"params": func(f *Func) []string {
-			return f.Params(g.fs)
-		},
-		"results": func(f *Func) []string {
-			return f.Results(g.fs)
-		},
-		"receiver": func(f *Func) string {
-			if f.ReceiverType() == nil {
-				return ""
-			}
-
-			return strings.Replace(nodeToString(g.fs, f.ReceiverType()), "*", "", -1) + "."
-		},
-		"want": func(s string) string { return strings.Replace(s, "got", "want", 1) },
-	}
-
 	for _, f := range g.funcs {
-		err := g.processTemplate(w, "test", testTemplate, helpers, struct {
+		err := g.testTemplate.Execute(w, struct {
 			Func    *Func
 			Comment string
 		}{
@@ -140,25 +117,6 @@ func (g *Generator) WriteTests(w io.Writer) error {
 		if err != nil {
 			return fmt.Errorf("failed to write test: %v", err)
 		}
-	}
-
-	return nil
-}
-
-func (g *Generator) processTemplate(w io.Writer, tmplName, tmplBody string, funcs template.FuncMap, data interface{}) error {
-	tmpl := template.New(tmplName)
-
-	if funcs != nil {
-		tmpl = tmpl.Funcs(funcs)
-	}
-
-	tmpl, err := tmpl.Parse(tmplBody)
-	if err != nil {
-		return fmt.Errorf("failed to parse %s template: %v", tmplName, err)
-	}
-
-	if err := tmpl.Execute(w, data); err != nil {
-		return fmt.Errorf("failed to execute %s template: %v", tmplName, err)
 	}
 
 	return nil
