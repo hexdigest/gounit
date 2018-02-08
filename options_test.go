@@ -43,16 +43,6 @@ func TestGetOptions(t *testing.T) {
 			},
 		},
 		{
-			name: "missing line number",
-			args: func(t *testing.T) args {
-				return args{
-					stderr: newExpectPrefixWriter(t, "missing line numbers or function names"),
-					stdout: ioutil.Discard,
-					exit:   expectExitCode(t, 2),
-				}
-			},
-		},
-		{
 			name: "missing input file",
 			args: func(t *testing.T) args {
 				return args{

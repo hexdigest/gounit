@@ -33,7 +33,7 @@ func NewGenerator(opt Options, src, testSrc io.Reader) (*Generator, error) {
 	}
 
 	visitor := NewVisitor(func(fd *ast.FuncDecl) bool {
-		return opt.Lines.Include(fs.Position(fd.Pos()).Line) || opt.Functions.Include(fd.Name.Name)
+		return opt.All || opt.Lines.Include(fs.Position(fd.Pos()).Line) || opt.Functions.Include(fd.Name.Name)
 	})
 
 	ast.Walk(visitor, file)

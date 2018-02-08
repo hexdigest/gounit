@@ -19,6 +19,7 @@ type Options struct {
 	InputFile  string
 	OutputFile string
 	Comment    string
+	All        bool
 	UseCLI     bool
 	UseStdin   bool
 	UseStdout  bool
@@ -95,8 +96,9 @@ func GetOptions(arguments []string, stdout, stderr io.Writer, exit exitFunc) Opt
 		lines      LinesNumbers
 		functions  FunctionsList
 		flagset    = flag.NewFlagSet("gounit", flag.ExitOnError)
-		showHelp   = flagset.Bool("h", false, "display this help text and exit")
+		all        = flagset.Bool("all", true, "generate tests for all functions")
 		cli        = flagset.Bool("cli", false, "interactive mode")
+		showHelp   = flagset.Bool("h", false, "display this help text and exit")
 		useStdin   = flagset.Bool("stdin", false, "use stdin rather than reading the input file")
 		useStdout  = flagset.Bool("stdout", false, "use stdout rather than writing to the output file")
 		inputFile  = flagset.String("i", "", "input file name")
@@ -117,11 +119,9 @@ func GetOptions(arguments []string, stdout, stderr io.Writer, exit exitFunc) Opt
 		return Options{UseCLI: true}
 	}
 
-	var errors []string
-	if len(lines) == 0 && len(functions) == 0 {
-		errors = append(errors, "missing line numbers or function names")
-	}
+	*all = len(lines) == 0 && len(functions) == 0
 
+	var errors []string
 	if *inputFile == "" {
 		errors = append(errors, "missing input file")
 	}
@@ -145,6 +145,7 @@ func GetOptions(arguments []string, stdout, stderr io.Writer, exit exitFunc) Opt
 	}
 
 	return Options{
+		All:        *all,
 		Lines:      lines,
 		Functions:  functions,
 		InputFile:  *inputFile,

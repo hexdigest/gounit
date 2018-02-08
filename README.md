@@ -13,17 +13,21 @@ go get github.com/hexdigest/gounit/cmd/gounit
 ## Usage of GoUnit
 
 ```
+    -all
+    	generate tests for all functions (default true)
   -c string
     	comment that will be inserted into the generated test
-  -f string
-    	tested function name
+  -cli
+    	interactive mode
+  -f value
+    	comma-separated function names to generate tests for
   -h	display this help text and exit
   -i string
-    	input file
-  -l uint
-    	number of the line (starting with 1) with the function declaration
+    	input file name
+  -l value
+    	comma-separated line numbers (starting with 1) to look for the function declarations
   -o string
-    	output file (optional)
+    	output file name (optional)
   -stdin
     	use stdin rather than reading the input file
   -stdout
