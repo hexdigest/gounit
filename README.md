@@ -13,7 +13,7 @@ go get github.com/hexdigest/gounit/cmd/gounit
 ## Usage of GoUnit
 
 ```
-    -all
+  -all
     	generate tests for all functions (default true)
   -c string
     	comment that will be inserted into the generated test
