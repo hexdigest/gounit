@@ -53,7 +53,7 @@ func main() {
 
 	for {
 		cli.Read("input file name", &inputFileName)
-		cli.Read("output file name (press enter if it doesn't exist yet)", &outputFileName)
+		cli.Read("output file name (file may not exist)", &outputFileName)
 		cli.Read("line numbers", &lines)
 		cli.Read("comment", &comment)
 
