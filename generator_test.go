@@ -311,7 +311,8 @@ func TestGenerator_Write(t *testing.T) {
 			name: "failed to write header",
 			init: func(t *testing.T) *Generator {
 				return &Generator{
-					buf: bytes.NewBuffer([]byte{}),
+					buf:   bytes.NewBuffer([]byte{}),
+					funcs: []*Func{{}},
 					headerTemplate: template.Must(template.New("header").Funcs(template.FuncMap{
 						"error": func() (string, error) {
 							return "", errors.New("error")

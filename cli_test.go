@@ -77,6 +77,22 @@ func TestCLI_ReadUntil(t *testing.T) {
 		}
 	})
 
+	t.Run("empty buffer", func(t *testing.T) {
+		cli := NewCLI(
+			strings.NewReader("eof"),
+			ioutil.Discard,
+		)
+
+		p, err := cli.ReadUntil("value", "eof")
+		if err != nil {
+			t.Errorf("unexpected error: %v", err)
+		}
+
+		if len(p) != 0 {
+			t.Errorf("got non empty buffer: %s", string(p))
+		}
+	})
+
 	t.Run("scan failed", func(t *testing.T) {
 		cli := NewCLI(
 			errorReader{errors.New("read error")},

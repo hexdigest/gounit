@@ -96,7 +96,11 @@ func main() {
 			die("failed to read generated file: %v", err)
 		}
 
-		showOutput(testsBytes, generatedCode, comment)
+		if len(generatedCode) == 0 {
+			fmt.Println("All tests for requested functions already exist")
+		} else {
+			showOutput(testsBytes, generatedCode, comment)
+		}
 	}
 }
 

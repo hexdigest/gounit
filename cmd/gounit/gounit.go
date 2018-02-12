@@ -22,7 +22,7 @@ func main() {
 
 	var (
 		r, testSrc io.Reader
-		w          io.Writer
+		w          io.WriteCloser
 		err        error
 		buf        = bytes.NewBuffer([]byte{})
 	)
@@ -45,25 +45,17 @@ func main() {
 		if !os.IsNotExist(err) {
 			exit(gounit.ErrFailedToOpenOutFile.Format(err))
 		}
-
-		if !options.UseStdout {
-			if outFile, err = os.OpenFile(options.OutputFile, os.O_CREATE|os.O_WRONLY, 0600); err != nil {
-				exit(gounit.ErrFailedToCreateOutFile.Format(err))
-			}
-		}
 	} else {
+		w = outFile
 		testSrc = outFile
-	}
-
-	defer outFile.Close()
-
-	w = outFile
-	if options.UseStdout {
-		w = os.Stdout
 	}
 
 	generator, err := gounit.NewGenerator(options, r, testSrc)
 	if err != nil {
+		exit(err)
+	}
+
+	if err := generator.Write(buf); err != nil {
 		exit(err)
 	}
 
@@ -75,12 +67,21 @@ func main() {
 		}
 	}
 
-	if err := generator.Write(buf); err != nil {
-		exit(err)
+	if options.UseStdout {
+		w = os.Stdout
 	}
 
-	if _, err = w.Write(buf.Bytes()); err != nil {
-		exit(gounit.ErrWriteTest.Format(err))
+	if b := buf.Bytes(); len(b) > 0 { //some code has been generated
+		if w == nil {
+			if w, err = os.OpenFile(options.OutputFile, os.O_CREATE|os.O_WRONLY, 0600); err != nil {
+				exit(gounit.ErrFailedToCreateOutFile.Format(err))
+			}
+			defer w.Close()
+		}
+
+		if _, err = w.Write(b); err != nil {
+			exit(gounit.ErrWriteTest.Format(err))
+		}
 	}
 }
 
@@ -105,7 +106,7 @@ func interactive(r io.Reader, w io.Writer) error {
 		if err := opt.Lines.Set(lines); err != nil {
 			return err
 		}
-		if err := cli.Read("TODO comment:", &opt.Comment); err != nil {
+		if err := cli.Read("TODO comment", &opt.Comment); err != nil {
 			return err
 		}
 

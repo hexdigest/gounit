@@ -7,6 +7,7 @@ import (
 	"go/parser"
 	"go/token"
 	"io"
+	"path/filepath"
 	"text/template"
 
 	"golang.org/x/tools/imports"
@@ -32,6 +33,8 @@ func NewGenerator(opt Options, src, testSrc io.Reader) (*Generator, error) {
 		return nil, ErrFailedToParseInFile.Format(err)
 	}
 
+	packageName := file.Name.String()
+
 	visitor := NewVisitor(func(fd *ast.FuncDecl) bool {
 		return opt.All || opt.Lines.Include(fs.Position(fd.Pos()).Line) || opt.Functions.Include(fd.Name.Name)
 	})
@@ -49,12 +52,23 @@ func NewGenerator(opt Options, src, testSrc io.Reader) (*Generator, error) {
 	if testSrc != nil {
 		tr := io.TeeReader(testSrc, buf)
 
+		//parsing source buffer as it can differ from the actual file in the package
 		file, err := parser.ParseFile(fs, opt.OutputFile, tr, 0)
 		if err != nil {
 			return nil, ErrFailedToParseOutFile.Format(err)
 		}
-
 		funcs = findMissingTests(file, funcs)
+	}
+
+	packages, err := parser.ParseDir(fs, filepath.Dir(opt.OutputFile), nil, 0)
+	if err != nil {
+		return nil, ErrFailedToParseOutFile.Format(err)
+	}
+
+	if pkg := packages[packageName]; pkg != nil {
+		for _, file := range pkg.Files {
+			funcs = findMissingTests(file, funcs)
+		}
 	}
 
 	return &Generator{
@@ -63,13 +77,17 @@ func NewGenerator(opt Options, src, testSrc io.Reader) (*Generator, error) {
 		fs:             fs,
 		funcs:          funcs,
 		imports:        file.Imports,
-		pkg:            file.Name.String(),
+		pkg:            packageName,
 		headerTemplate: template.Must(template.New("header").Funcs(templateHelpers(fs)).Parse(headerTemplate)),
 		testTemplate:   template.Must(template.New("test").Funcs(templateHelpers(fs)).Parse(testTemplate)),
 	}, nil
 }
 
 func (g *Generator) Write(w io.Writer) error {
+	if len(g.funcs) == 0 {
+		return nil
+	}
+
 	if g.buf.Len() == 0 {
 		if err := g.WriteHeader(g.buf); err != nil {
 			return ErrGenerateHeader.Format(err)
