@@ -4,6 +4,8 @@ GoUnit is a unit tests generator for Go programming language
 
 The goal of the project is to generate more convenient test stubs than GoTests does and also to improve integration with text editors and IDEs.
 
+There is a [Vim plugin](https://github.com/hexdigest/gounit-vim) that introduces the :GoUnit command which generates a test for the selected function.
+
 ## Installation
 
 ```
