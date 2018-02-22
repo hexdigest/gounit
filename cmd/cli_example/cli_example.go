@@ -38,8 +38,6 @@ func main() {
 		die("failed to start gounit: %v", err)
 	}
 
-	b := bufio.NewReader(guStdout)
-
 	go func() {
 		message, err := ioutil.ReadAll(guStderr)
 		if err != nil {
@@ -50,6 +48,8 @@ func main() {
 	}()
 
 	cli := gounit.NewCLI(os.Stdin, os.Stdout)
+
+	b := bufio.NewReader(guStdout)
 
 	for {
 		cli.Read("input file name", &inputFileName)
@@ -68,26 +68,34 @@ func main() {
 			die("failed to read output file: %v", err)
 		}
 
-		b.ReadString('\n') //skipping gounit prompt
+		fmt.Println("read input file")
+
+		skipPrompt(b)
 		fmt.Fprintln(guStdin, inputFileName)
+		fmt.Println("printed input file name")
 
-		b.ReadString('\n')
+		skipPrompt(b)
 		fmt.Fprintln(guStdin, outputFileName)
+		fmt.Println("printed output file name")
 
-		b.ReadString('\n')
+		skipPrompt(b)
 		fmt.Fprintln(guStdin, lines)
+		fmt.Println("printed num lines")
 
-		b.ReadString('\n')
+		skipPrompt(b)
 		fmt.Fprintln(guStdin, comment)
+		fmt.Println("printed comment")
 
-		b.ReadString('\n')
+		skipPrompt(b)
 		fmt.Fprintln(guStdin, string(eof))
+		fmt.Println("printed eof")
 
-		b.ReadString('\n')
+		skipPrompt(b)
 		guStdin.Write(inBytes)
 		guStdin.Write(eof)
+		fmt.Println("source file written")
 
-		b.ReadString('\n')
+		skipPrompt(b)
 		guStdin.Write(testsBytes)
 		guStdin.Write(eof)
 
@@ -102,6 +110,16 @@ func main() {
 			showOutput(testsBytes, generatedCode, comment)
 		}
 	}
+}
+
+func skipPrompt(b *bufio.Reader) {
+	s, err := b.ReadString('\n')
+	if err != nil {
+		fmt.Printf("failed to read prompt: %v\n", err)
+		os.Exit(1)
+	}
+
+	fmt.Printf("skipped prompt: %s\n", s)
 }
 
 func showOutput(testsBefore, testsAfter []byte, comment string) {

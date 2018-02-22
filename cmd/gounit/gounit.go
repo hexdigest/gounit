@@ -9,8 +9,6 @@ import (
 	"github.com/hexdigest/gounit"
 )
 
-type exitFunc func(int)
-
 func main() {
 	options := gounit.GetOptions(os.Args[1:], os.Stdout, os.Stderr, os.Exit)
 	if options.UseCLI {
