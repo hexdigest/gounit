@@ -19,13 +19,14 @@ go get github.com/hexdigest/gounit/cmd/gounit
     	generate tests for all functions (default true)
   -c string
     	comment that will be inserted into the generated test
-  -cli
-    	interactive mode
   -f value
     	comma-separated function names to generate tests for
   -h	display this help text and exit
   -i string
     	input file name
+  -json
+    	read JSON-encoded input parameters from stdin
+    	please see http://github.com/hexdigest/gounit for details
   -l value
     	comma-separated line numbers (starting with 1) to look for the function declarations
   -o string
@@ -35,6 +36,10 @@ go get github.com/hexdigest/gounit/cmd/gounit
   -stdout
     	use stdout rather than writing to the output file
 ```
+
+## JSON mode (-json command line flag)
+In JSON mode GoUnit reads [JSON requests](https://github.com/hexdigest/gounit/blob/master/client.go#L5) from Stdin in a loop and produces [JSON responses](https://github.com/hexdigest/gounit/blob/master/client.go#L16) with generated test(s) that are written to Stdout.
+Using this mode you can generate as many tests as you want by running GoUnit executable only once.
 
 ## Problems of GoTests
 
