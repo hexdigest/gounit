@@ -33,7 +33,7 @@ func NewGenerator(opt Options, src, testSrc io.Reader) (*Generator, error) {
 		return nil, ErrFailedToParseInFile.Format(err)
 	}
 
-	packageName := file.Name.String()
+	srcPackageName := file.Name.String()
 
 	visitor := NewVisitor(func(fd *ast.FuncDecl) bool {
 		return opt.All || opt.Lines.Include(fs.Position(fd.Pos()).Line) || opt.Functions.Include(fd.Name.Name)
@@ -47,7 +47,10 @@ func NewGenerator(opt Options, src, testSrc io.Reader) (*Generator, error) {
 		return nil, ErrFuncNotFound
 	}
 
-	var buf = bytes.NewBuffer([]byte{})
+	var (
+		buf            = bytes.NewBuffer([]byte{})
+		dstPackageName = srcPackageName
+	)
 
 	if testSrc != nil {
 		tr := io.TeeReader(testSrc, buf)
@@ -57,6 +60,9 @@ func NewGenerator(opt Options, src, testSrc io.Reader) (*Generator, error) {
 		if err != nil {
 			return nil, ErrFailedToParseOutFile.Format(err)
 		}
+
+		//using package name from the destination file since it can be a *_test package
+		dstPackageName = file.Name.String()
 		funcs = findMissingTests(file, funcs)
 	}
 
@@ -65,7 +71,7 @@ func NewGenerator(opt Options, src, testSrc io.Reader) (*Generator, error) {
 		return nil, ErrFailedToParseOutFile.Format(err)
 	}
 
-	if pkg := packages[packageName]; pkg != nil {
+	for _, pkg := range packages {
 		for _, file := range pkg.Files {
 			funcs = findMissingTests(file, funcs)
 		}
@@ -77,7 +83,7 @@ func NewGenerator(opt Options, src, testSrc io.Reader) (*Generator, error) {
 		fs:             fs,
 		funcs:          funcs,
 		imports:        file.Imports,
-		pkg:            packageName,
+		pkg:            dstPackageName,
 		headerTemplate: template.Must(template.New("header").Funcs(templateHelpers(fs)).Parse(headerTemplate)),
 		testTemplate:   template.Must(template.New("test").Funcs(templateHelpers(fs)).Parse(testTemplate)),
 	}, nil
