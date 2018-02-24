@@ -2,9 +2,8 @@ package main
 
 import (
 	"bufio"
-	"bytes"
+	"encoding/json"
 	"fmt"
-	"io"
 	"io/ioutil"
 	"os"
 	"os/exec"
@@ -13,12 +12,8 @@ import (
 	"github.com/hexdigest/gounit"
 )
 
-var eof = []byte("<cli_example_eof>")
-
 func main() {
-	var inputFileName, outputFileName, lines, comment string
-
-	cmd := exec.Command("gounit", "-cli")
+	cmd := exec.Command("gounit", "-json")
 	guStdout, err := cmd.StdoutPipe()
 	if err != nil {
 		die("failed to open stdout pipe: %v", err)
@@ -47,84 +42,55 @@ func main() {
 		die("gounit exited with error: %v, %s", err, string(message))
 	}()
 
-	cli := gounit.NewCLI(os.Stdin, os.Stdout)
-
-	b := bufio.NewReader(guStdout)
-
+	var (
+		decoder = json.NewDecoder(guStdout)
+		encoder = json.NewEncoder(guStdin)
+		s       string
+	)
 	for {
-		cli.Read("input file name", &inputFileName)
-		cli.Read("output file name (file may not exist)", &outputFileName)
-		cli.Read("line numbers", &lines)
-		cli.Read("comment", &comment)
-
-		inBytes, err := read(inputFileName)
-		if err != nil {
+		var (
+			request  gounit.Request
+			response gounit.Response
+			lines    gounit.LinesNumbers
+		)
+		read("input file path", &request.InputFilePath)
+		if request.InputFile, err = readFile(request.InputFilePath); err != nil {
 			die("failed to read input file: %v", err)
 		}
 
-		var testsBytes []byte
-		testsBytes, err = read(outputFileName)
-		if err != nil && !os.IsNotExist(err) {
+		read("output file path(file may not exist)", &request.OutputFilePath)
+		if request.OutputFile, err = readFile(request.OutputFilePath); err != nil && !os.IsNotExist(err) {
 			die("failed to read output file: %v", err)
 		}
 
-		fmt.Println("read input file")
+		read("comment", &request.Comment)
 
-		skipPrompt(b)
-		fmt.Fprintln(guStdin, inputFileName)
-		fmt.Println("printed input file name")
-
-		skipPrompt(b)
-		fmt.Fprintln(guStdin, outputFileName)
-		fmt.Println("printed output file name")
-
-		skipPrompt(b)
-		fmt.Fprintln(guStdin, lines)
-		fmt.Println("printed num lines")
-
-		skipPrompt(b)
-		fmt.Fprintln(guStdin, comment)
-		fmt.Println("printed comment")
-
-		skipPrompt(b)
-		fmt.Fprintln(guStdin, string(eof))
-		fmt.Println("printed eof")
-
-		skipPrompt(b)
-		guStdin.Write(inBytes)
-		guStdin.Write(eof)
-		fmt.Println("source file written")
-
-		skipPrompt(b)
-		guStdin.Write(testsBytes)
-		guStdin.Write(eof)
-
-		generatedCode, err := readUntilEOF(guStdout)
-		if err != nil {
-			die("failed to read generated file: %v", err)
+		read("line numbers", &s)
+		if err := lines.Set(s); err != nil {
+			die("invalid lines numbers: %v", err)
 		}
 
-		if len(generatedCode) == 0 {
+		request.Lines = []int(lines)
+
+		if err := encoder.Encode(request); err != nil {
+			die("failed to encode request: %v", err)
+		}
+
+		if err := decoder.Decode(&response); err != nil {
+			die("failed to decode response: %v", err)
+		}
+
+		if len(response.GeneratedCode) == 0 {
 			fmt.Println("All tests for requested functions already exist")
 		} else {
-			showOutput(testsBytes, generatedCode, comment)
+			showOutput(request.OutputFile, response.GeneratedCode, request.Comment)
 		}
 	}
 }
 
-func skipPrompt(b *bufio.Reader) {
-	s, err := b.ReadString('\n')
-	if err != nil {
-		fmt.Printf("failed to read prompt: %v\n", err)
-		os.Exit(1)
-	}
-
-	fmt.Printf("skipped prompt: %s\n", s)
-}
-
-func showOutput(testsBefore, testsAfter []byte, comment string) {
+func showOutput(testsBefore, testsAfter string, comment string) {
 	linesBefore := getLinesCount(testsBefore)
-	scanner := bufio.NewScanner(bytes.NewReader(testsAfter))
+	scanner := bufio.NewScanner(strings.NewReader(testsAfter))
 	ln := 1
 	found := false
 	for scanner.Scan() {
@@ -139,9 +105,9 @@ func showOutput(testsBefore, testsAfter []byte, comment string) {
 	}
 }
 
-func getLinesCount(b []byte) int {
+func getLinesCount(text string) int {
 	l := 0
-	scanner := bufio.NewScanner(bytes.NewReader(b))
+	scanner := bufio.NewScanner(strings.NewReader(text))
 	for scanner.Scan() {
 		l++
 	}
@@ -149,37 +115,25 @@ func getLinesCount(b []byte) int {
 	return l
 }
 
-func read(fileName string) ([]byte, error) {
+func readFile(fileName string) (string, error) {
 	f, err := os.Open(fileName)
 	if err != nil {
-		return nil, err
+		return "", err
 	}
 
-	return ioutil.ReadAll(f)
+	b, err := ioutil.ReadAll(f)
+	if err != nil {
+		return "", err
+	}
+
+	return string(b), nil
 }
 
-func readUntilEOF(r io.Reader) ([]byte, error) {
-	scanner := bufio.NewScanner(r)
-	scanner.Split(
-		func(data []byte, atEOF bool) (advance int, token []byte, err error) {
-			if atEOF && len(data) == 0 {
-				return 0, nil, nil
-			}
-			if i := bytes.Index(data, eof); i >= 0 {
-				return i + len(eof), data[0:i], nil
-			}
-			if atEOF {
-				return len(data), data, nil
-			}
-			return 0, nil, nil
-		},
-	)
-	scanner.Scan()
-	if err := scanner.Err(); err != nil {
-		return nil, fmt.Errorf("scan failed: %v", err)
+func read(prompt string, dest interface{}) {
+	fmt.Printf("%s:\n", prompt)
+	if _, err := fmt.Scanln(dest); err != nil {
+		die("failed to read %T: %v", dest, err)
 	}
-
-	return scanner.Bytes(), nil
 }
 
 func die(format string, args ...interface{}) {

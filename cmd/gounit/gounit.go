@@ -2,17 +2,19 @@ package main
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"io"
 	"os"
+	"strings"
 
 	"github.com/hexdigest/gounit"
 )
 
 func main() {
 	options := gounit.GetOptions(os.Args[1:], os.Stdout, os.Stderr, os.Exit)
-	if options.UseCLI {
-		if err := interactive(os.Stdin, os.Stdout); err != nil {
+	if options.UseJSON {
+		if err := processJSON(os.Stdin, os.Stdout); err != nil {
 			exit(err)
 		}
 		return
@@ -83,60 +85,44 @@ func main() {
 	}
 }
 
-func interactive(r io.Reader, w io.Writer) error {
-	cli := gounit.NewCLI(r, w)
+func processJSON(r io.Reader, w io.Writer) error {
+	var jo gounit.Request
+
+	encoder := json.NewEncoder(w)
+	decoder := json.NewDecoder(r)
+
 	for {
-		var (
-			opt   gounit.Options
-			lines string
-			eof   string
-		)
-
-		if err := cli.Read("input file name", &opt.InputFile); err != nil {
-			return err
-		}
-		if err := cli.Read("output file name", &opt.OutputFile); err != nil {
-			return err
-		}
-		if err := cli.Read("lines numbers with functions declarations", &lines); err != nil {
-			return err
-		}
-		if err := opt.Lines.Set(lines); err != nil {
-			return err
-		}
-		if err := cli.Read("TODO comment", &opt.Comment); err != nil {
+		if err := decoder.Decode(&jo); err != nil {
 			return err
 		}
 
-		if err := cli.Read("EOF sequence", &eof); err != nil {
-			return err
-		}
-
-		inBytes, err := cli.ReadUntil("input file contents", eof)
-		if err != nil {
-			return gounit.ErrFailedToOpenInFile.Format(err)
-		}
-
-		outBytes, err := cli.ReadUntil("output file contents", eof)
-		if err != nil {
-			return gounit.ErrFailedToOpenOutFile.Format(err)
-		}
-
-		inputFile := bytes.NewBuffer(inBytes)
+		inputFile := strings.NewReader(jo.InputFile)
 
 		var outputFile io.Reader
-		if len(outBytes) != 0 {
-			outputFile = bytes.NewBuffer(outBytes)
+		if len(jo.OutputFile) > 0 {
+			outputFile = strings.NewReader(jo.OutputFile)
+		}
+
+		opt := gounit.Options{
+			InputFile:  jo.InputFilePath,
+			OutputFile: jo.OutputFilePath,
+			Comment:    jo.Comment,
+			Lines:      gounit.LinesNumbers(jo.Lines),
 		}
 
 		generator, err := gounit.NewGenerator(opt, inputFile, outputFile)
 		if err != nil {
-			exit(err)
+			return err
 		}
 
-		generator.Write(w)
-		if _, err := w.Write([]byte(eof)); err != nil {
-			exit(gounit.ErrWriteTest.Format(err))
+		b := bytes.NewBuffer([]byte{})
+
+		if err := generator.Write(b); err != nil {
+			return err
+		}
+
+		if err := encoder.Encode(gounit.Response{GeneratedCode: b.String()}); err != nil {
+			return err
 		}
 	}
 }

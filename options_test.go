@@ -54,14 +54,14 @@ func TestGetOptions(t *testing.T) {
 			},
 		},
 		{
-			name: "cli",
+			name: "json",
 			args: func(t *testing.T) args {
 				return args{
 					stdout:    ioutil.Discard,
-					arguments: []string{"-cli"},
+					arguments: []string{"-json"},
 				}
 			},
-			want1: Options{UseCLI: true},
+			want1: Options{UseJSON: true},
 		},
 		{
 			name: "success",

@@ -20,7 +20,7 @@ type Options struct {
 	OutputFile string
 	Comment    string
 	All        bool
-	UseCLI     bool
+	UseJSON    bool
 	UseStdin   bool
 	UseStdout  bool
 }
@@ -97,7 +97,7 @@ func GetOptions(arguments []string, stdout, stderr io.Writer, exit exitFunc) Opt
 		functions  FunctionsList
 		flagset    = flag.NewFlagSet("gounit", flag.ExitOnError)
 		all        = flagset.Bool("all", true, "generate tests for all functions")
-		cli        = flagset.Bool("cli", false, "interactive mode")
+		useJSON    = flagset.Bool("json", false, "read JSON-encoded input parameters from stdin\nplease see http://github.com/hexdigest/gounit for details")
 		showHelp   = flagset.Bool("h", false, "display this help text and exit")
 		useStdin   = flagset.Bool("stdin", false, "use stdin rather than reading the input file")
 		useStdout  = flagset.Bool("stdout", false, "use stdout rather than writing to the output file")
@@ -115,8 +115,8 @@ func GetOptions(arguments []string, stdout, stderr io.Writer, exit exitFunc) Opt
 		exit(ExitCodeOK)
 	}
 
-	if *cli {
-		return Options{UseCLI: true}
+	if *useJSON {
+		return Options{UseJSON: true}
 	}
 
 	*all = len(lines) == 0 && len(functions) == 0
