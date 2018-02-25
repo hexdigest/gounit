@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"encoding/json"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"os"
 	"os/exec"
@@ -33,7 +34,7 @@ func main() {
 		die("failed to start gounit: %v", err)
 	}
 
-	go func() {
+	defer func() {
 		message, err := ioutil.ReadAll(guStderr)
 		if err != nil {
 			die("failed to read from gounit stderr stream: %v", err)
@@ -77,7 +78,10 @@ func main() {
 		}
 
 		if err := decoder.Decode(&response); err != nil {
-			die("failed to decode response: %v", err)
+			if err != io.EOF {
+				die("failed to decode response: %v", err)
+			}
+			return
 		}
 
 		if len(response.GeneratedCode) == 0 {
