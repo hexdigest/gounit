@@ -9,9 +9,11 @@ import (
 	"text/template"
 )
 
+type matchFunc func(*ast.FuncDecl) bool
+
 //findMissingTests filters funcs slice and returns only those functions that don't have tests yet
 func findMissingTests(file *ast.File, funcs []*Func) []*Func {
-	visitor := NewVisitor(func(fd *ast.FuncDecl) bool {
+	tests := findFunctions(file.Decls, func(fd *ast.FuncDecl) bool {
 		for _, sourceFunc := range funcs {
 			f := NewFunc(fd)
 			if f.ReceiverType() == nil && f.Name() == sourceFunc.TestName() {
@@ -21,12 +23,10 @@ func findMissingTests(file *ast.File, funcs []*Func) []*Func {
 		return false
 	})
 
-	ast.Walk(visitor, file)
-
 	dontHaveTests := []*Func{}
 	for _, f := range funcs {
 		testIsFound := false
-		for _, test := range visitor.Funcs() {
+		for _, test := range tests {
 			if test.Name() == f.TestName() {
 				testIsFound = true
 				break
@@ -38,6 +38,19 @@ func findMissingTests(file *ast.File, funcs []*Func) []*Func {
 	}
 
 	return dontHaveTests
+}
+
+//findFunctions finds all matching function declarations
+func findFunctions(decls []ast.Decl, match matchFunc) []*Func {
+	var funcs []*Func
+
+	for _, decl := range decls {
+		if fd, ok := decl.(*ast.FuncDecl); ok && match(fd) {
+			funcs = append(funcs, NewFunc(fd))
+		}
+	}
+
+	return funcs
 }
 
 //nodeToString returns a string representation of an AST node

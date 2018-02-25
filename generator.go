@@ -7,7 +7,9 @@ import (
 	"go/parser"
 	"go/token"
 	"io"
+	"os"
 	"path/filepath"
+	"strings"
 	"text/template"
 
 	"golang.org/x/tools/imports"
@@ -29,19 +31,15 @@ type Generator struct {
 func NewGenerator(opt Options, src, testSrc io.Reader) (*Generator, error) {
 	fs := token.NewFileSet()
 	file, err := parser.ParseFile(fs, opt.InputFile, src, 0)
-	if err != nil {
+
+	srcPackageName := file.Name.String()
+	if srcPackageName == "" {
 		return nil, ErrFailedToParseInFile.Format(err)
 	}
 
-	srcPackageName := file.Name.String()
-
-	visitor := NewVisitor(func(fd *ast.FuncDecl) bool {
+	funcs := findFunctions(file.Decls, func(fd *ast.FuncDecl) bool {
 		return opt.All || opt.Lines.Include(fs.Position(fd.Pos()).Line) || opt.Functions.Include(fd.Name.Name)
 	})
-
-	ast.Walk(visitor, file)
-
-	funcs := visitor.Funcs()
 
 	if len(funcs) == 0 {
 		return nil, ErrFuncNotFound
@@ -66,7 +64,30 @@ func NewGenerator(opt Options, src, testSrc io.Reader) (*Generator, error) {
 		funcs = findMissingTests(file, funcs)
 	}
 
-	packages, err := parser.ParseDir(fs, filepath.Dir(opt.OutputFile), nil, 0)
+	//this filter leaves only test files so we can ignore syntax errors in the tested code
+	//but we still have to fail when test files contain syntax errors because it's not possible
+	//to identify missing tests in such case
+	filter := func(fi os.FileInfo) bool {
+		if fi.IsDir() {
+			return false
+		}
+
+		if strings.HasSuffix(fi.Name(), "_test.go") {
+			return true
+		}
+
+		f, err := os.Open(fi.Name())
+		if err != nil {
+			return false
+		}
+		defer f.Close()
+
+		astFile, _ := parser.ParseFile(fs, fi.Name(), f, parser.PackageClauseOnly)
+
+		return astFile.Name.String() == srcPackageName+"_test"
+	}
+
+	packages, err := parser.ParseDir(fs, filepath.Dir(opt.OutputFile), filter, 0)
 	if err != nil {
 		return nil, ErrFailedToParseOutFile.Format(err)
 	}

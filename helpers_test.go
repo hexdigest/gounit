@@ -174,3 +174,39 @@ func Test_templateHelpers(t *testing.T) {
 		t.Errorf("unexpected want helper result: %s", want)
 	}
 }
+
+func Test_findFunctions(t *testing.T) {
+	type args struct {
+		decls []ast.Decl
+		match matchFunc
+	}
+	tests := []struct {
+		name string
+		args func(t *testing.T) args
+
+		want1 []*Func
+	}{
+		{
+			name: "success",
+			args: func(t *testing.T) args {
+				return args{
+					decls: []ast.Decl{&ast.FuncDecl{}, &ast.FuncDecl{}},
+					match: func(*ast.FuncDecl) bool { return true },
+				}
+			},
+			want1: []*Func{&Func{}},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tArgs := tt.args(t)
+
+			got1 := findFunctions(tArgs.decls, tArgs.match)
+
+			if len(got1) != 2 {
+				t.Errorf("unexpected result slice size: got1 = %d, want1: 2", len(got1))
+			}
+		})
+	}
+}
