@@ -106,7 +106,7 @@ func NewGenerator(opt Options, src, testSrc io.Reader) (*Generator, error) {
 		imports:        file.Imports,
 		pkg:            dstPackageName,
 		headerTemplate: template.Must(template.New("header").Funcs(templateHelpers(fs)).Parse(headerTemplate)),
-		testTemplate:   template.Must(template.New("test").Funcs(templateHelpers(fs)).Parse(testTemplate)),
+		testTemplate:   template.Must(template.New("test").Funcs(templateHelpers(fs)).Parse(opt.Template)),
 	}, nil
 }
 

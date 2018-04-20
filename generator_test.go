@@ -194,12 +194,12 @@ func TestNewGenerator(t *testing.T) {
 			},
 			wantErr: true,
 			inspectErr: func(err error, t *testing.T) {
-				gErr, ok := err.(*Error)
+				gErr, ok := err.(GenericError)
 				if !ok {
 					t.Fatalf("unexpected error: %v", err)
 				}
 
-				if gErr.Code() != ErrFailedToParseInFile.Code() {
+				if gErr != ErrFailedToParseInFile.Format("1:1: expected 'package', found 'EOF'") {
 					t.Errorf("unexpected error: %v", err)
 				}
 			},
@@ -248,12 +248,12 @@ func TestNewGenerator(t *testing.T) {
 			},
 			wantErr: true,
 			inspectErr: func(err error, t *testing.T) {
-				gErr, ok := err.(*Error)
+				gErr, ok := err.(GenericError)
 				if !ok {
 					t.Fatalf("unexpected error: %v", err)
 				}
 
-				if gErr.Code() != ErrFailedToParseOutFile.Code() {
+				if gErr != ErrFailedToParseOutFile.Format("1:1: expected 'package', found 'EOF'") {
 					t.Errorf("unexpected error: %v", err)
 				}
 			},
@@ -325,12 +325,12 @@ func TestGenerator_Write(t *testing.T) {
 			},
 			wantErr: true,
 			inspectErr: func(err error, t *testing.T) {
-				gErr, ok := err.(*Error)
+				gErr, ok := err.(GenericError)
 				if !ok {
 					t.Fatalf("unexpected error type: %T", err)
 				}
 
-				if gErr.Code() != ErrGenerateHeader.Code() {
+				if gErr != ErrGenerateHeader.Format("template: header:1:3: executing \"header\" at <error>: error calling error: error") {
 					t.Errorf("unexpected error: %v", err)
 				}
 			},
@@ -354,12 +354,12 @@ func TestGenerator_Write(t *testing.T) {
 			},
 			wantErr: true,
 			inspectErr: func(err error, t *testing.T) {
-				gErr, ok := err.(*Error)
+				gErr, ok := err.(GenericError)
 				if !ok {
 					t.Fatalf("unexpected error type: %T", err)
 				}
 
-				if gErr.Code() != ErrGenerateTest.Code() {
+				if gErr != ErrGenerateTest.Format("failed to write test: template: test:1:3: executing \"test\" at <error>: error calling error: error") {
 					t.Errorf("unexpected error: %v", err)
 				}
 			},
@@ -379,12 +379,12 @@ func TestGenerator_Write(t *testing.T) {
 			},
 			wantErr: true,
 			inspectErr: func(err error, t *testing.T) {
-				gErr, ok := err.(*Error)
+				gErr, ok := err.(GenericError)
 				if !ok {
 					t.Fatalf("unexpected error type: %T", err)
 				}
 
-				if gErr.Code() != ErrFixImports.Code() {
+				if gErr != ErrFixImports.Format("1:1: expected 'package', found 'IDENT' invalid") {
 					t.Errorf("unexpected error: %v", err)
 				}
 			},
@@ -404,12 +404,12 @@ func TestGenerator_Write(t *testing.T) {
 			},
 			wantErr: true,
 			inspectErr: func(err error, t *testing.T) {
-				gErr, ok := err.(*Error)
+				gErr, ok := err.(GenericError)
 				if !ok {
 					t.Fatalf("unexpected error type: %T", err)
 				}
 
-				if gErr.Code() != ErrWriteTest.Code() {
+				if gErr != ErrWriteTest.Format("write error") {
 					t.Errorf("unexpected error: %v", err)
 				}
 			},

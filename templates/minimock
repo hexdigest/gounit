@@ -1,0 +1,74 @@
+{{$func := .Func}}
+
+func {{ $func.TestName }}(t *testing.T) {
+	{{- if (gt $func.NumParams 0) }}
+		type args struct {
+			{{ range $param := params $func }}
+				{{- $param}}
+			{{ end }}
+		}
+	{{ end -}}
+	tests := []struct {
+		name string
+		{{- if $func.IsMethod }}
+			init func(t minimock.Tester) {{ ast $func.ReceiverType }}
+			inspect func(r {{ ast $func.ReceiverType }}, t *testing.T) //inspects {{ ast $func.ReceiverType }} after execution of {{$func.Name}}
+		{{ end }}
+		{{- if (gt $func.NumParams 0) }}
+			args func(t minimock.Tester) args
+		{{ end }}
+		{{ range $result := results $func}}
+			{{ want $result -}}
+		{{ end }}
+		{{- if $func.ReturnsError }}
+			wantErr bool
+			inspectErr func (err error, t *testing.T) //use for more precise error evaluation
+		{{ end -}}
+	}{
+		{{- if eq .Comment "" }}
+			//TODO: Add test cases
+		{{else}}
+			//{{ .Comment }}
+		{{end -}}
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+		  mc := minimock.NewController(t)
+		  defer mc.Wait(time.Second)
+
+			{{if (gt $func.NumParams 0) }}
+				tArgs := tt.args(mc)
+			{{ end}}
+			{{- if $func.IsMethod -}}
+				receiver := tt.init(mc)
+
+				{{ if (gt $func.NumResults 0) }}{{ join $func.ResultsNames ", " }} := {{end}}receiver.{{$func.Name}}(
+					{{- range $i, $pn := $func.ParamsNames }}
+						{{- if not (eq $i 0)}},{{end}}tArgs.{{ $pn }}{{ end }})
+
+				if tt.inspect != nil {
+					tt.inspect(receiver, t)
+				}
+			{{ else }}
+				{{ if (gt $func.NumResults 0) }}{{ join $func.ResultsNames ", " }} := {{end}}{{$func.Name}}(
+					{{- range $i, $pn := $func.ParamsNames }}
+						{{- if not (eq $i 0)}},{{end}}tArgs.{{ $pn }}{{ end }})
+			{{end}}
+			{{ range $result := $func.ResultsNames }}
+				{{ if (eq $result "err") }}
+          if tt.wantErr {
+            if assert.Error(t, err) && tt.inspectErr!= nil {
+						  tt.inspectErr(err, t)
+            }
+					} else {
+					  assert.NoError(t, err)
+					}
+					
+				{{ else }}
+				  assert.Equal(t, tt.{{ want $result }}, {{ $result }}, "{{ receiver $func }}{{ $func.Name }} returned unexpected result")
+				{{end -}}
+			{{end -}}
+		})
+	}
+}
