@@ -223,7 +223,7 @@ func TestNewGenerator(t *testing.T) {
 			args: func(*testing.T) args {
 				return args{
 					opt: Options{
-						Functions: FunctionsList{"function"},
+						Functions: []string{"function"},
 					},
 					src: strings.NewReader(`package nofuncs
 					 func function() int {
@@ -237,7 +237,7 @@ func TestNewGenerator(t *testing.T) {
 			args: func(*testing.T) args {
 				return args{
 					opt: Options{
-						Functions: FunctionsList{"function"},
+						Functions: []string{"function"},
 					},
 					src: strings.NewReader(`package nofuncs
 					 func function() int {
@@ -263,7 +263,7 @@ func TestNewGenerator(t *testing.T) {
 			args: func(*testing.T) args {
 				return args{
 					opt: Options{
-						Functions: FunctionsList{"function"},
+						Functions: []string{"function"},
 					},
 					src: strings.NewReader(`package nofuncs
 					 func function() int {

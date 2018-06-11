@@ -1,22 +1,18 @@
-package gounit
+package main
 
 import (
 	"bytes"
 	"encoding/json"
 	"flag"
 	"fmt"
-	"go/ast"
-	"go/parser"
-	"go/token"
 	"io"
 	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
-	"text/template"
 
+	"github.com/hexdigest/gounit"
 	"github.com/shibukawa/configdir"
-	"golang.org/x/tools/imports"
 )
 
 var conf = configdir.New("gounit", "gounit").QueryFolders(configdir.Global)[0]
@@ -71,11 +67,11 @@ func (tc *TemplateCommand) FlagSet() *flag.FlagSet {
 
 func (tc *TemplateCommand) Run(args []string, stdout, stderr io.Writer) error {
 	if len(args) < 1 {
-		return CommandLineError("invalid number of arguments")
+		return gounit.CommandLineError("invalid number of arguments")
 	}
 
 	if err := tc.FlagSet().Parse(args[1:]); err != nil {
-		return CommandLineError(err.Error())
+		return gounit.CommandLineError(err.Error())
 	}
 
 	switch args[0] {
@@ -89,12 +85,12 @@ func (tc *TemplateCommand) Run(args []string, stdout, stderr io.Writer) error {
 		return removeTemplate(tc.templateNumber)
 	}
 
-	return CommandLineError(fmt.Sprintf("invalid subcommand %q", args[0]))
+	return gounit.CommandLineError(fmt.Sprintf("invalid subcommand %q", args[0]))
 }
 
 func installTemplate(filename string) error {
 	if filename == "" {
-		return CommandLineError("missing file name")
+		return gounit.CommandLineError("missing file name")
 	}
 
 	if err := checkTemplate(filename); err != nil {
@@ -173,7 +169,7 @@ func getDefaultTemplate() (string, error) {
 
 func useTemplate(templateNumber uint) error {
 	if templateNumber == 0 {
-		return CommandLineError("missing template number: -n")
+		return gounit.CommandLineError("missing template number: -n")
 	}
 
 	names, err := getTemplatesNames()
@@ -183,7 +179,7 @@ func useTemplate(templateNumber uint) error {
 	names = append([]string{""}, names...)
 
 	if int(templateNumber) > len(names) {
-		return CommandLineError(fmt.Sprintf("invalid template number: %d", templateNumber))
+		return gounit.CommandLineError(fmt.Sprintf("invalid template number: %d", templateNumber))
 	}
 
 	c, err := readConfig()
@@ -197,7 +193,7 @@ func useTemplate(templateNumber uint) error {
 
 func removeTemplate(templateNumber uint) error {
 	if templateNumber == 0 {
-		return CommandLineError("missing template number: -n")
+		return gounit.CommandLineError("missing template number: -n")
 	}
 
 	names, err := getTemplatesNames()
@@ -207,11 +203,11 @@ func removeTemplate(templateNumber uint) error {
 	names = append([]string{""}, names...)
 
 	if int(templateNumber) > len(names) {
-		return CommandLineError(fmt.Sprintf("invalid template number: %d", templateNumber))
+		return gounit.CommandLineError(fmt.Sprintf("invalid template number: %d", templateNumber))
 	}
 
 	if names[templateNumber-1] == "" {
-		return CommandLineError("can't remove preinstalled template")
+		return gounit.CommandLineError("can't remove preinstalled template")
 	}
 
 	if err := os.Remove(filepath.Join(conf.Path, "templates", names[templateNumber-1])); err != nil && !os.IsNotExist(err) {
@@ -301,18 +297,12 @@ func writeConfig(c Config) error {
 //checkTemplate executes template against a simple func and
 //verifies that produced result is a syntactically correct .go code
 func checkTemplate(filename string) error {
-	fs := token.NewFileSet()
-	code := `
+	src := strings.NewReader(`
 		package funcs
 
 		func function() int {
 			return 0
-		}`
-
-	file, err := parser.ParseFile(fs, "file.go", strings.NewReader(code), 0)
-	if err != nil {
-		return err
-	}
+		}`)
 
 	f, err := os.Open(filename)
 	if err != nil {
@@ -324,32 +314,92 @@ func checkTemplate(filename string) error {
 		return err
 	}
 
-	tmpl, err := template.New("test").Funcs(templateHelpers(fs)).Parse(string(contents))
+	opt := gounit.Options{
+		Template: string(contents),
+		All:      true,
+	}
+
+	g, err := gounit.NewGenerator(opt, src, nil)
 	if err != nil {
 		return err
 	}
 
-	g := &Generator{
-		buf:            bytes.NewBuffer([]byte{}),
-		fs:             fs,
-		funcs:          findFunctions(file.Decls, func(fd *ast.FuncDecl) bool { return true }),
-		imports:        file.Imports,
-		pkg:            "funcs",
-		headerTemplate: template.Must(template.New("header").Funcs(templateHelpers(fs)).Parse(headerTemplate)),
-		testTemplate:   tmpl,
-	}
-
-	buf := bytes.NewBuffer([]byte{})
-	if err := g.WriteHeader(buf); err != nil {
-		return err
-	}
-	if err := g.WriteTests(buf); err != nil {
-		return err
-	}
-
-	if _, err := imports.Process("example.go", buf.Bytes(), nil); err != nil {
-		return fmt.Errorf("template produces invalid .go file\n%v\n%s", err, string(buf.Bytes()))
+	testSrc := bytes.NewBuffer([]byte{})
+	if err := g.Write(testSrc); err != nil {
+		return fmt.Errorf("template produces invalid .go file\n%v\n%s", err, g.Source())
 	}
 
 	return nil
 }
+
+var testTemplate = `{{$func := .Func}}
+
+func {{ $func.TestName }}(t *testing.T) {
+	{{- if (gt $func.NumParams 0) }}
+		type args struct {
+			{{ range $param := params $func }}
+				{{- $param}}
+			{{ end }}
+		}
+	{{ end -}}
+	tests := []struct {
+		name string
+		{{- if $func.IsMethod }}
+			init func(t *testing.T) {{ ast $func.ReceiverType }}
+			inspect func(r {{ ast $func.ReceiverType }}, t *testing.T) //inspects receiver after test run
+		{{ end }}
+		{{- if (gt $func.NumParams 0) }}
+			args func(t *testing.T) args
+		{{ end }}
+		{{ range $result := results $func}}
+			{{ want $result -}}
+		{{ end }}
+		{{- if $func.ReturnsError }}
+			wantErr bool
+			inspectErr func (err error, t *testing.T) //use for more precise error evaluation after test
+		{{ end -}}
+	}{
+		{{- if eq .Comment "" }}
+			//TODO: Add test cases
+		{{else}}
+			//{{ .Comment }}
+		{{end -}}
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			{{- if (gt $func.NumParams 0) }}
+				tArgs := tt.args(t)
+			{{ end -}}
+			{{ if $func.IsMethod }}
+				receiver := tt.init(t)
+				{{ if (gt $func.NumResults 0) }}{{ join $func.ResultsNames ", " }} := {{end}}receiver.{{$func.Name}}(
+					{{- range $i, $pn := $func.ParamsNames }}
+						{{- if not (eq $i 0)}},{{end}}tArgs.{{ $pn }}{{ end }})
+
+				if tt.inspect != nil {
+					tt.inspect(receiver, t)
+				}
+			{{ else }}
+				{{ if (gt $func.NumResults 0) }}{{ join $func.ResultsNames ", " }} := {{end}}{{$func.Name}}(
+					{{- range $i, $pn := $func.ParamsNames }}
+						{{- if not (eq $i 0)}},{{end}}tArgs.{{ $pn }}{{ end }})
+			{{end}}
+			{{ range $result := $func.ResultsNames }}
+				{{ if (eq $result "err") }}
+					if (err != nil) != tt.wantErr {
+						t.Fatalf("{{ receiver $func }}{{ $func.Name }} error = %v, wantErr: %t", err, tt.wantErr)
+					}
+
+					if tt.inspectErr!= nil {
+						tt.inspectErr(err, t)
+					}
+				{{ else }}
+					if !reflect.DeepEqual({{ $result }}, tt.{{ want $result }}) {
+						t.Errorf("{{ receiver $func }}{{ $func.Name }} {{ $result }} = %v, {{ want $result }}: %v", {{ $result }}, tt.{{ want $result }})
+					}
+				{{end -}}
+			{{end -}}
+		})
+	}
+}`

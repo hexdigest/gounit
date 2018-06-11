@@ -10,8 +10,8 @@ import (
 )
 
 func init() {
-	gounit.RegisterCommand("gen", &gounit.GenerateCommand{})
-	gounit.RegisterCommand("template", &gounit.TemplateCommand{})
+	gounit.RegisterCommand("gen", &GenerateCommand{})
+	gounit.RegisterCommand("template", &TemplateCommand{})
 }
 
 func main() {

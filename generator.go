@@ -15,6 +15,35 @@ import (
 	"golang.org/x/tools/imports"
 )
 
+var (
+	ErrGenerateHeader        = GenericError("failed to write header: %v")
+	ErrGenerateTest          = GenericError("failed to write test: %v")
+	ErrFuncNotFound          = GenericError("unable to find a function declaration")
+	ErrFailedToParseInFile   = GenericError("failed to parse input file: %v")
+	ErrFailedToParseOutFile  = GenericError("failed to parse output file: %v")
+	ErrFailedToOpenInFile    = GenericError("failed to open input file: %v")
+	ErrFailedToOpenOutFile   = GenericError("failed to open output file: %v")
+	ErrFailedToCreateOutFile = GenericError("failed to create output file: %v")
+	ErrInputFileDoesNotExist = GenericError("input file does not exist")
+	ErrSeekFailed            = GenericError("failed to seek: %v")
+	ErrFixImports            = GenericError("failed to fix imports: %v")
+	ErrWriteTest             = GenericError("failed to write generated test: %v")
+	ErrInvalidTestTemplate   = GenericError("invalid test template: %v")
+)
+
+type Options struct {
+	Lines      []int
+	Functions  []string
+	InputFile  string
+	OutputFile string
+	Comment    string
+	Template   string
+	All        bool
+	UseJSON    bool
+	UseStdin   bool
+	UseStdout  bool
+}
+
 //Generator is used to generate a test stub for function Func
 type Generator struct {
 	fs             *token.FileSet
@@ -38,7 +67,23 @@ func NewGenerator(opt Options, src, testSrc io.Reader) (*Generator, error) {
 	}
 
 	funcs := findFunctions(file.Decls, func(fd *ast.FuncDecl) bool {
-		return opt.All || opt.Lines.Include(fs.Position(fd.Pos()).Line) || opt.Functions.Include(fd.Name.Name)
+		if opt.All {
+			return true
+		}
+
+		for _, l := range opt.Lines {
+			if l == fs.Position(fd.Pos()).Line {
+				return true
+			}
+		}
+
+		for _, f := range opt.Functions {
+			if f == fd.Name.Name {
+				return true
+			}
+		}
+
+		return false
 	})
 
 	if len(funcs) == 0 {
@@ -98,6 +143,11 @@ func NewGenerator(opt Options, src, testSrc io.Reader) (*Generator, error) {
 		}
 	}
 
+	testTemplate, err := template.New("test").Funcs(templateHelpers(fs)).Parse(opt.Template)
+	if err != nil {
+		return nil, ErrInvalidTestTemplate.Format(err)
+	}
+
 	return &Generator{
 		buf:            buf,
 		opt:            opt,
@@ -106,7 +156,7 @@ func NewGenerator(opt Options, src, testSrc io.Reader) (*Generator, error) {
 		imports:        file.Imports,
 		pkg:            dstPackageName,
 		headerTemplate: template.Must(template.New("header").Funcs(templateHelpers(fs)).Parse(headerTemplate)),
-		testTemplate:   template.Must(template.New("test").Funcs(templateHelpers(fs)).Parse(opt.Template)),
+		testTemplate:   testTemplate,
 	}, nil
 }
 
@@ -135,6 +185,10 @@ func (g *Generator) Write(w io.Writer) error {
 	}
 
 	return nil
+}
+
+func (g *Generator) Source() string {
+	return g.buf.String()
 }
 
 //WriteHeader writes a package name and import specs
@@ -174,75 +228,3 @@ import(
 	"reflect"{{range $import := .Imports}}
 	{{ast $import}}{{end}}
 )`
-
-var testTemplate = `{{$func := .Func}}
-
-func {{ $func.TestName }}(t *testing.T) {
-	{{- if (gt $func.NumParams 0) }}
-		type args struct {
-			{{ range $param := params $func }}
-				{{- $param}}
-			{{ end }}
-		}
-	{{ end -}}
-	tests := []struct {
-		name string
-		{{- if $func.IsMethod }}
-			init func(t *testing.T) {{ ast $func.ReceiverType }}
-			inspect func(r {{ ast $func.ReceiverType }}, t *testing.T) //inspects receiver after test run
-		{{ end }}
-		{{- if (gt $func.NumParams 0) }}
-			args func(t *testing.T) args
-		{{ end }}
-		{{ range $result := results $func}}
-			{{ want $result -}}
-		{{ end }}
-		{{- if $func.ReturnsError }}
-			wantErr bool
-			inspectErr func (err error, t *testing.T) //use for more precise error evaluation after test
-		{{ end -}}
-	}{
-		{{- if eq .Comment "" }}
-			//TODO: Add test cases
-		{{else}}
-			//{{ .Comment }}
-		{{end -}}
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			{{- if (gt $func.NumParams 0) }}
-				tArgs := tt.args(t)
-			{{ end -}}
-			{{ if $func.IsMethod }}
-				receiver := tt.init(t)
-				{{ if (gt $func.NumResults 0) }}{{ join $func.ResultsNames ", " }} := {{end}}receiver.{{$func.Name}}(
-					{{- range $i, $pn := $func.ParamsNames }}
-						{{- if not (eq $i 0)}},{{end}}tArgs.{{ $pn }}{{ end }})
-
-				if tt.inspect != nil {
-					tt.inspect(receiver, t)
-				}
-			{{ else }}
-				{{ if (gt $func.NumResults 0) }}{{ join $func.ResultsNames ", " }} := {{end}}{{$func.Name}}(
-					{{- range $i, $pn := $func.ParamsNames }}
-						{{- if not (eq $i 0)}},{{end}}tArgs.{{ $pn }}{{ end }})
-			{{end}}
-			{{ range $result := $func.ResultsNames }}
-				{{ if (eq $result "err") }}
-					if (err != nil) != tt.wantErr {
-						t.Fatalf("{{ receiver $func }}{{ $func.Name }} error = %v, wantErr: %t", err, tt.wantErr)
-					}
-
-					if tt.inspectErr!= nil {
-						tt.inspectErr(err, t)
-					}
-				{{ else }}
-					if !reflect.DeepEqual({{ $result }}, tt.{{ want $result }}) {
-						t.Errorf("{{ receiver $func }}{{ $func.Name }} {{ $result }} = %v, {{ want $result }}: %v", {{ $result }}, tt.{{ want $result }})
-					}
-				{{end -}}
-			{{end -}}
-		})
-	}
-}`

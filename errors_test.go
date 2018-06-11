@@ -90,3 +90,10 @@ func TestNewError(t *testing.T) {
 		})
 	}
 }
+
+func TestCommandLineError_Error(t *testing.T) {
+	s := CommandLineError("command line").Error()
+	if s != "command line" {
+		t.Fatalf("want: \"command line\", got: %q", s)
+	}
+}

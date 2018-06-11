@@ -1,4 +1,4 @@
-package gounit
+package main
 
 import (
 	"bytes"
@@ -10,43 +10,19 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
-)
 
-var (
-	ErrGenerateHeader        = GenericError("failed to write header: %v")
-	ErrGenerateTest          = GenericError("failed to write test: %v")
-	ErrFuncNotFound          = GenericError("unable to find a function declaration")
-	ErrFailedToParseInFile   = GenericError("failed to parse input file: %v")
-	ErrFailedToParseOutFile  = GenericError("failed to parse output file: %v")
-	ErrFailedToOpenInFile    = GenericError("failed to open input file: %v")
-	ErrFailedToOpenOutFile   = GenericError("failed to open output file: %v")
-	ErrFailedToCreateOutFile = GenericError("failed to create output file: %v")
-	ErrInputFileDoesNotExist = GenericError("input file does not exist")
-	ErrSeekFailed            = GenericError("failed to seek: %v")
-	ErrFixImports            = GenericError("failed to fix imports: %v")
-	ErrWriteTest             = GenericError("failed to write generated test: %v")
+	"github.com/hexdigest/gounit"
 )
 
 type LinesNumbers []int
 type FunctionsList []string
 
-type Options struct {
-	Lines      LinesNumbers
-	Functions  FunctionsList
-	InputFile  string
-	OutputFile string
-	Comment    string
-	Template   string
-	All        bool
-	UseJSON    bool
-	UseStdin   bool
-	UseStdout  bool
-}
-
 //GenerateCommand implements Command interface
 type GenerateCommand struct {
-	Options Options
+	Options gounit.Options
 	fs      *flag.FlagSet
+	lines   LinesNumbers
+	funcs   FunctionsList
 }
 
 //Description implements Command interface
@@ -70,8 +46,8 @@ func (gc *GenerateCommand) FlagSet() *flag.FlagSet {
 		gc.fs.StringVar(&o.InputFile, "i", "", "input file name")
 		gc.fs.StringVar(&o.OutputFile, "o", "", "output file name (optional)")
 		gc.fs.StringVar(&o.Comment, "c", "", "comment that will be inserted into the generated test")
-		gc.fs.Var(&o.Lines, "l", "comma-separated line numbers (starting with 1) to look for the function declarations")
-		gc.fs.Var(&o.Functions, "f", "comma-separated function names to generate tests for")
+		gc.fs.Var(&gc.lines, "l", "comma-separated line numbers (starting with 1) to look for the function declarations")
+		gc.fs.Var(&gc.funcs, "f", "comma-separated function names to generate tests for")
 	}
 
 	return gc.fs
@@ -79,15 +55,17 @@ func (gc *GenerateCommand) FlagSet() *flag.FlagSet {
 
 func (gc *GenerateCommand) Run(args []string, stdout, stderr io.Writer) error {
 	if err := gc.FlagSet().Parse(args); err != nil {
-		return CommandLineError(err.Error())
+		return gounit.CommandLineError(err.Error())
 	}
 
 	options := gc.Options
+	options.Lines = []int(gc.lines)
+	options.Functions = []string(gc.funcs)
 
 	options.All = (len(options.Lines) == 0 && len(options.Functions) == 0)
 
 	if options.InputFile == "" {
-		return CommandLineError("missing input file")
+		return gounit.CommandLineError("missing input file")
 	}
 
 	if options.OutputFile == "" {
@@ -116,11 +94,11 @@ func (gc *GenerateCommand) Run(args []string, stdout, stderr io.Writer) error {
 	r, err = os.Open(options.InputFile)
 	if err != nil {
 		if !os.IsNotExist(err) {
-			return ErrFailedToOpenInFile.Format(err)
+			return gounit.ErrFailedToOpenInFile.Format(err)
 		}
 
 		if !options.UseStdin {
-			return ErrInputFileDoesNotExist
+			return gounit.ErrInputFileDoesNotExist
 		}
 
 		r = os.Stdin
@@ -129,7 +107,7 @@ func (gc *GenerateCommand) Run(args []string, stdout, stderr io.Writer) error {
 	outFile, err := os.OpenFile(options.OutputFile, os.O_RDWR, 0600)
 	if err != nil {
 		if !os.IsNotExist(err) {
-			ErrFailedToOpenOutFile.Format(err)
+			gounit.ErrFailedToOpenOutFile.Format(err)
 		}
 	} else {
 		w = outFile
@@ -141,7 +119,7 @@ func (gc *GenerateCommand) Run(args []string, stdout, stderr io.Writer) error {
 		return err
 	}
 
-	generator, err := NewGenerator(options, r, testSrc)
+	generator, err := gounit.NewGenerator(options, r, testSrc)
 	if err != nil {
 		return err
 	}
@@ -154,7 +132,7 @@ func (gc *GenerateCommand) Run(args []string, stdout, stderr io.Writer) error {
 	//re-opening the file
 	if seeker, ok := w.(io.Seeker); ok {
 		if _, err := seeker.Seek(0, 0); err != nil {
-			return ErrSeekFailed.Format(err)
+			return gounit.ErrSeekFailed.Format(err)
 		}
 	}
 
@@ -165,13 +143,13 @@ func (gc *GenerateCommand) Run(args []string, stdout, stderr io.Writer) error {
 	if b := buf.Bytes(); len(b) > 0 { //some code has been generated
 		if w == nil {
 			if w, err = os.OpenFile(options.OutputFile, os.O_CREATE|os.O_WRONLY, 0600); err != nil {
-				ErrFailedToCreateOutFile.Format(err)
+				gounit.ErrFailedToCreateOutFile.Format(err)
 			}
 			defer w.Close()
 		}
 
 		if _, err = w.Write(b); err != nil {
-			ErrWriteTest.Format(err)
+			gounit.ErrWriteTest.Format(err)
 		}
 	}
 
@@ -179,7 +157,7 @@ func (gc *GenerateCommand) Run(args []string, stdout, stderr io.Writer) error {
 }
 
 func (gc *GenerateCommand) processJSON(r io.Reader, w io.Writer) error {
-	var jo Request
+	var jo gounit.Request
 
 	encoder := json.NewEncoder(w)
 	decoder := json.NewDecoder(r)
@@ -197,11 +175,11 @@ func (gc *GenerateCommand) processJSON(r io.Reader, w io.Writer) error {
 			outputFile = strings.NewReader(jo.OutputFile)
 		}
 
-		opt := Options{
+		opt := gounit.Options{
 			InputFile:  jo.InputFilePath,
 			OutputFile: jo.OutputFilePath,
 			Comment:    jo.Comment,
-			Lines:      LinesNumbers(jo.Lines),
+			Lines:      jo.Lines,
 		}
 
 		opt.Template, err = getDefaultTemplate()
@@ -209,7 +187,7 @@ func (gc *GenerateCommand) processJSON(r io.Reader, w io.Writer) error {
 			return err
 		}
 
-		generator, err := NewGenerator(opt, inputFile, outputFile)
+		generator, err := gounit.NewGenerator(opt, inputFile, outputFile)
 		if err != nil {
 			return err
 		}
@@ -220,7 +198,7 @@ func (gc *GenerateCommand) processJSON(r io.Reader, w io.Writer) error {
 			return err
 		}
 
-		if err := encoder.Encode(Response{GeneratedCode: b.String()}); err != nil {
+		if err := encoder.Encode(gounit.Response{GeneratedCode: b.String()}); err != nil {
 			return err
 		}
 	}
@@ -246,16 +224,6 @@ func (ln *LinesNumbers) String() string {
 	return fmt.Sprintf("%d", []int(*ln))
 }
 
-//Include checks if the given line is in the LinesNumbers slice
-func (ln LinesNumbers) Include(line int) bool {
-	for _, l := range ln {
-		if l == line {
-			return true
-		}
-	}
-	return false
-}
-
 var regexpIdent = regexp.MustCompile("^([a-zA-Z_][a-zA-Z0-9]*|\\*)$")
 
 //Set implements flag.Value interface
@@ -276,14 +244,4 @@ func (fl *FunctionsList) Set(value string) error {
 //String implements flag.Value interface
 func (fl *FunctionsList) String() string {
 	return fmt.Sprintf("%s", []string(*fl))
-}
-
-//Include checks if the given line is in the LinesNumbers slice
-func (fl FunctionsList) Include(function string) bool {
-	for _, f := range fl {
-		if f == function {
-			return true
-		}
-	}
-	return false
 }

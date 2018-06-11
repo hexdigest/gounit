@@ -1,4 +1,4 @@
-package gounit
+package main
 
 import (
 	"reflect"
@@ -95,59 +95,6 @@ func TestLinesNumbers_String(t *testing.T) {
 	}
 }
 
-func TestLinesNumbers_Include(t *testing.T) {
-	type args struct {
-		line int
-	}
-	tests := []struct {
-		name    string
-		init    func(t *testing.T) LinesNumbers
-		inspect func(r LinesNumbers, t *testing.T) //inspects receiver after test run
-
-		args func(t *testing.T) args
-
-		want1 bool
-	}{
-		{
-			name: "true",
-			init: func(t *testing.T) LinesNumbers {
-				return LinesNumbers{1, 2, 3}
-			},
-			args: func(*testing.T) args {
-				return args{line: 2}
-			},
-			want1: true,
-		},
-		{
-			name: "false",
-			init: func(t *testing.T) LinesNumbers {
-				return LinesNumbers{1, 2, 3}
-			},
-			args: func(*testing.T) args {
-				return args{line: 7}
-			},
-			want1: false,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			tArgs := tt.args(t)
-
-			receiver := tt.init(t)
-			got1 := receiver.Include(tArgs.line)
-
-			if tt.inspect != nil {
-				tt.inspect(receiver, t)
-			}
-
-			if !reflect.DeepEqual(got1, tt.want1) {
-				t.Errorf("LinesNumbers.Include got1 = %v, want1: %v", got1, tt.want1)
-			}
-		})
-	}
-}
-
 func TestFunctionsList_Set(t *testing.T) {
 	type args struct {
 		value string
@@ -234,59 +181,6 @@ func TestFunctionsList_String(t *testing.T) {
 
 			if !reflect.DeepEqual(got1, tt.want1) {
 				t.Errorf("FunctionsList.String got1 = %v, want1: %v", got1, tt.want1)
-			}
-		})
-	}
-}
-
-func TestFunctionsList_Include(t *testing.T) {
-	type args struct {
-		function string
-	}
-	tests := []struct {
-		name    string
-		init    func(t *testing.T) FunctionsList
-		inspect func(r FunctionsList, t *testing.T) //inspects receiver after test run
-
-		args func(t *testing.T) args
-
-		want1 bool
-	}{
-		{
-			name: "true",
-			init: func(t *testing.T) FunctionsList {
-				return FunctionsList{"func1", "func2", "func3"}
-			},
-			args: func(*testing.T) args {
-				return args{function: "func2"}
-			},
-			want1: true,
-		},
-		{
-			name: "false",
-			init: func(t *testing.T) FunctionsList {
-				return FunctionsList{"func1", "func2", "func3"}
-			},
-			args: func(*testing.T) args {
-				return args{function: "func5"}
-			},
-			want1: false,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			tArgs := tt.args(t)
-
-			receiver := tt.init(t)
-			got1 := receiver.Include(tArgs.function)
-
-			if tt.inspect != nil {
-				tt.inspect(receiver, t)
-			}
-
-			if !reflect.DeepEqual(got1, tt.want1) {
-				t.Errorf("FunctionsList.Include got1 = %v, want1: %v", got1, tt.want1)
 			}
 		})
 	}
