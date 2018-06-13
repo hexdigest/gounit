@@ -20,6 +20,11 @@ func main() {
 		os.Exit(2)
 	}
 
+	flag.CommandLine.Usage = func() {
+		fmt.Fprintf(os.Stderr, "Run 'gounit help' for usage.\n")
+		os.Exit(2)
+	}
+
 	flag.Parse()
 	args := flag.Args()
 
