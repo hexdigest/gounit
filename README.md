@@ -13,7 +13,7 @@ There are plugins for
 ## Installation
 
 ```
-go get github.com/hexdigest/gounit/cmd/gounit
+go get -u github.com/hexdigest/gounit/cmd/gounit
 ```
 
 ## Usage of GoUnit
