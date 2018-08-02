@@ -32,16 +32,17 @@ var (
 )
 
 type Options struct {
-	Lines      []int
-	Functions  []string
-	InputFile  string
-	OutputFile string
-	Comment    string
-	Template   string
-	All        bool
-	UseJSON    bool
-	UseStdin   bool
-	UseStdout  bool
+	Lines        []int
+	Functions    []string
+	InputFile    string
+	OutputFile   string
+	Comment      string
+	Template     string
+	TemplateName string
+	All          bool
+	UseJSON      bool
+	UseStdin     bool
+	UseStdout    bool
 }
 
 //Generator is used to generate a test stub for function Func

@@ -15,6 +15,8 @@ import (
 	"github.com/shibukawa/configdir"
 )
 
+const defaultTemplateName = "default"
+
 var conf = configdir.New("gounit", "gounit").QueryFolders(configdir.Global)[0]
 
 type Config struct {
@@ -25,7 +27,7 @@ type Config struct {
 type TemplateCommand struct {
 	fs *flag.FlagSet
 
-	templateNumber   uint
+	templateName     string
 	templateFileName string
 }
 
@@ -35,34 +37,26 @@ func (tc *TemplateCommand) Description() string {
 }
 
 func (tc *TemplateCommand) Usage() string {
-	return `usage: gounit template subcommand [flags]
+	return `usage: gounit template subcommand [args]
 
 Subcommands usage examples:
 
-	gounit template add [-f]
-		install a template
+	gounit template add <file>
+		install a template, file name is used as a template name
 
 	gounit template list
 		show all installed templates
 
-	gounit template use [-n]
+	gounit template use <template>
 		use selected template by default
 
-	gounit template remove [-n]
+	gounit template remove <template>
 		remove a template
-
-Flags:
 `
 }
 
 func (tc *TemplateCommand) FlagSet() *flag.FlagSet {
-	if tc.fs == nil {
-		tc.fs = &flag.FlagSet{}
-		tc.fs.StringVar(&tc.templateFileName, "f", "", "template file name")
-		tc.fs.UintVar(&tc.templateNumber, "n", 0, "template number")
-	}
-
-	return tc.fs
+	return nil
 }
 
 func (tc *TemplateCommand) Run(args []string, stdout, stderr io.Writer) error {
@@ -70,19 +64,24 @@ func (tc *TemplateCommand) Run(args []string, stdout, stderr io.Writer) error {
 		return gounit.CommandLineError("invalid number of arguments")
 	}
 
-	if err := tc.FlagSet().Parse(args[1:]); err != nil {
-		return gounit.CommandLineError(err.Error())
-	}
-
 	switch args[0] {
 	case "add":
-		return installTemplate(tc.templateFileName)
+		if len(args) < 2 {
+			return gounit.CommandLineError("missing file name")
+		}
+		return installTemplate(args[1])
 	case "list":
 		return listTemplates()
 	case "use":
-		return useTemplate(tc.templateNumber)
+		if len(args) < 2 {
+			return gounit.CommandLineError("missing template name")
+		}
+		return useTemplate(args[1])
 	case "remove":
-		return removeTemplate(tc.templateNumber)
+		if len(args) < 2 {
+			return gounit.CommandLineError("missing template name")
+		}
+		return removeTemplate(args[1])
 	}
 
 	return gounit.CommandLineError(fmt.Sprintf("invalid subcommand %q", args[0]))
@@ -93,11 +92,14 @@ func installTemplate(filename string) error {
 		return gounit.CommandLineError("missing file name")
 	}
 
+	_, templateName := filepath.Split(filename)
+	if templateName == defaultTemplateName {
+		return gounit.CommandLineError("can't rewrite default template")
+	}
+
 	if err := checkTemplate(filename); err != nil {
 		return err
 	}
-
-	_, templateName := filepath.Split(filename)
 
 	from, err := os.Open(filename)
 	if err != nil {
@@ -123,25 +125,20 @@ func listTemplates() error {
 	if err != nil {
 		return err
 	}
-	names = append([]string{"standard preinstalled template"}, names...)
 
-	defaultTemplateName, err := getDefaultTemplateName()
+	templateName, err := getDefaultTemplateName()
 	if err != nil {
 		return err
 	}
 
-	if defaultTemplateName == "" {
-		defaultTemplateName = names[0]
-	}
-
 	fmt.Printf("\ngounit templates installed\n\n")
 
-	for i, name := range names {
-		format := "%4d. %s\n"
-		if name == defaultTemplateName {
-			format = "=>%2d. %s\n"
+	for _, name := range names {
+		format := "      %s\n"
+		if name == templateName {
+			format = "    * %s\n"
 		}
-		fmt.Printf(format, i+1, name)
+		fmt.Printf(format, name)
 	}
 
 	fmt.Println()
@@ -149,17 +146,20 @@ func listTemplates() error {
 	return nil
 }
 
-func getDefaultTemplate() (string, error) {
-	templateName, err := getDefaultTemplateName()
-	if err != nil {
-		return "", err
+func getTemplate(name string) (string, error) {
+	var err error
+
+	if name == "" {
+		if name, err = getDefaultTemplateName(); err != nil {
+			return "", err
+		}
 	}
 
-	if templateName == "" {
+	if name == defaultTemplateName {
 		return testTemplate, nil
 	}
 
-	b, err := ioutil.ReadFile(filepath.Join(conf.Path, "templates", templateName))
+	b, err := ioutil.ReadFile(filepath.Join(conf.Path, "templates", name))
 	if err != nil {
 		return "", err
 	}
@@ -167,19 +167,9 @@ func getDefaultTemplate() (string, error) {
 	return string(b), nil
 }
 
-func useTemplate(templateNumber uint) error {
-	if templateNumber == 0 {
-		return gounit.CommandLineError("missing template number: -n")
-	}
-
-	names, err := getTemplatesNames()
-	if err != nil {
+func useTemplate(name string) error {
+	if err := templateExists(name); err != nil {
 		return err
-	}
-	names = append([]string{""}, names...)
-
-	if int(templateNumber) > len(names) {
-		return gounit.CommandLineError(fmt.Sprintf("invalid template number: %d", templateNumber))
 	}
 
 	c, err := readConfig()
@@ -187,34 +177,39 @@ func useTemplate(templateNumber uint) error {
 		return err
 	}
 
-	c.DefaultTemplate = names[templateNumber-1]
+	c.DefaultTemplate = name
 	return writeConfig(*c)
 }
 
-func removeTemplate(templateNumber uint) error {
-	if templateNumber == 0 {
-		return gounit.CommandLineError("missing template number: -n")
+func removeTemplate(name string) error {
+	if name == defaultTemplateName {
+		return gounit.CommandLineError("can't remove default template")
 	}
 
-	names, err := getTemplatesNames()
-	if err != nil {
+	if err := templateExists(name); err != nil {
 		return err
 	}
-	names = append([]string{""}, names...)
 
-	if int(templateNumber) > len(names) {
-		return gounit.CommandLineError(fmt.Sprintf("invalid template number: %d", templateNumber))
-	}
-
-	if names[templateNumber-1] == "" {
-		return gounit.CommandLineError("can't remove preinstalled template")
-	}
-
-	if err := os.Remove(filepath.Join(conf.Path, "templates", names[templateNumber-1])); err != nil && !os.IsNotExist(err) {
+	if err := os.Remove(filepath.Join(conf.Path, "templates", name)); err != nil && !os.IsNotExist(err) {
 		return err
 	}
 
 	return nil
+}
+
+func templateExists(name string) error {
+	names, err := getTemplatesNames()
+	if err != nil {
+		return err
+	}
+
+	for _, n := range names {
+		if n == name {
+			return nil
+		}
+	}
+
+	return gounit.CommandLineError("template does not exist: " + name)
 }
 
 func getTemplatesNames() ([]string, error) {
@@ -227,7 +222,7 @@ func getTemplatesNames() ([]string, error) {
 		return nil, err
 	}
 
-	templates := []string{}
+	templates := []string{defaultTemplateName}
 	for _, f := range files {
 		templates = append(templates, f.Name())
 	}
@@ -246,20 +241,13 @@ func getDefaultTemplateName() (string, error) {
 		return "", err
 	}
 
-	name := c.DefaultTemplate
-	found := false
-	for _, t := range names {
-		if t == name {
-			found = true
-			break
+	for _, name := range names {
+		if name == c.DefaultTemplate {
+			return name, nil
 		}
 	}
 
-	if found {
-		return name, nil
-	}
-
-	return "", nil
+	return defaultTemplateName, nil
 }
 
 func readConfig() (*Config, error) {

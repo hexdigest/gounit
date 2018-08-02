@@ -7,6 +7,7 @@ type Request struct {
 	OutputFilePath string `json:"outputFilePath"`
 	InputFile      string `json:"inputFile"`
 	OutputFile     string `json:"outputFile"`
+	TemplateName   string `json:"templateName"`
 	Comment        string `json:"comment"`
 	Lines          []int  `json:"lines"`
 }

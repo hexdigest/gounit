@@ -31,7 +31,7 @@ func (gc *GenerateCommand) Description() string {
 }
 
 func (gc *GenerateCommand) Usage() string {
-	return "usage: gounit gen [-i input file] [-o output file] [-all | -l lines | -f functions]"
+	return "usage: gounit gen [-i input file] [-o output file] [-t template name] [-all | -l lines | -f functions]"
 }
 
 func (gc *GenerateCommand) FlagSet() *flag.FlagSet {
@@ -45,6 +45,7 @@ func (gc *GenerateCommand) FlagSet() *flag.FlagSet {
 		gc.fs.BoolVar(&o.UseStdout, "stdout", false, "use stdout rather than writing to the output file")
 		gc.fs.StringVar(&o.InputFile, "i", "", "input file name")
 		gc.fs.StringVar(&o.OutputFile, "o", "", "output file name (optional)")
+		gc.fs.StringVar(&o.TemplateName, "t", "", "name of the template to use for the code generation (optional)")
 		gc.fs.StringVar(&o.Comment, "c", "", "comment that will be inserted into the generated test")
 		gc.fs.Var(&gc.lines, "l", "comma-separated line numbers (starting with 1) to look for the function declarations")
 		gc.fs.Var(&gc.funcs, "f", "comma-separated function names to generate tests for")
@@ -114,7 +115,7 @@ func (gc *GenerateCommand) Run(args []string, stdout, stderr io.Writer) error {
 		testSrc = outFile
 	}
 
-	options.Template, err = getDefaultTemplate()
+	options.Template, err = getTemplate(options.TemplateName)
 	if err != nil {
 		return err
 	}
@@ -182,7 +183,7 @@ func (gc *GenerateCommand) processJSON(r io.Reader, w io.Writer) error {
 			Lines:      jo.Lines,
 		}
 
-		opt.Template, err = getDefaultTemplate()
+		opt.Template, err = getTemplate(jo.TemplateName)
 		if err != nil {
 			return err
 		}
