@@ -21,15 +21,34 @@ go get -u github.com/hexdigest/gounit/cmd/gounit
 This will generate test stubs for all functions and method in file.go
 
 ```
-  gounit gen -i file.go 
+  $ gounit gen -i file.go 
 ```
 
 Run
 ```
-  gounit help
+  $ gounit help
 ```
 
 for more options
+
+## Custom test templates
+
+If you're not satisfied with the code produced by the default GoUnit test template you can always write your own!
+You can use [minimock](https://github.com/hexdigest/gounit/blob/master/templates/minimock) template as an example.
+Here is now to switch to the custom template:
+
+```
+  $ curl https://raw.githubusercontent.com/hexdigest/gounit/master/templates/minimock > minimock
+  $ gounit template add -f minimock
+  $ gounit template list
+
+    gounit templates installed
+
+         1. standard preinstalled template
+      => 2. minimock
+
+  $ gounit template use -n 2
+```
 
 ## Integration with editors and IDEs
 
