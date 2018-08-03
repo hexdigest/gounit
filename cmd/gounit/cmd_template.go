@@ -213,16 +213,17 @@ func templateExists(name string) error {
 }
 
 func getTemplatesNames() ([]string, error) {
+	templates := []string{defaultTemplateName}
+
 	files, err := ioutil.ReadDir(filepath.Join(conf.Path, "templates"))
 	if err != nil {
 		if os.IsNotExist(err) {
-			return nil, nil
+			return templates, nil
 		}
 
 		return nil, err
 	}
 
-	templates := []string{defaultTemplateName}
 	for _, f := range files {
 		templates = append(templates, f.Name())
 	}
