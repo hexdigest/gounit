@@ -384,7 +384,7 @@ func TestGenerator_Write(t *testing.T) {
 					t.Fatalf("unexpected error type: %T", err)
 				}
 
-				if gErr != ErrFixImports.Format("1:1: expected 'package', found invalid") {
+				if gErr != ErrFixImports.Format("1:1: expected 'package', found 'IDENT' invalid") {
 					t.Errorf("unexpected error: %v", err)
 				}
 			},
