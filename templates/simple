@@ -1,0 +1,5 @@
+{{$func := .Func}}
+
+func {{ $func.TestName }}(t *testing.T) {
+	
+}
