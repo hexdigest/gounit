@@ -3,7 +3,7 @@
 GoUnit is a commandline tool that generates tests stubs based on source function or method signature.
 
 There are plugins for
-* [Vim plugin](https://github.com/hexdigest/gounit-vim)
+* [Vim](https://github.com/hexdigest/gounit-vim)
 * [Emacs](https://github.com/hexdigest/GoUnit-Emacs)
 * [Atom](https://github.com/hexdigest/atom-gounit)
 * [Sublime](https://github.com/hexdigest/gounit-sublime)
